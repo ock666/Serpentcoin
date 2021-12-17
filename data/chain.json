@@ -1,0 +1,2 @@
+{"index": 1, "timestamp": 1639703802.4237726, "transactions": [], "proof": 100, "previous_hash": "Oskars Immutable Blockchain"}
+{"index": 2, "timestamp": 1639704684.4339511, "transactions": [{"sender": "0", "recipient": "b83ab32c4c64408eb07d08fcafd8a387", "amount": 1}], "proof": 888273, "previous_hash": "99b00e9f0f5a202c3c3ed113df243a74f3cc99c1958d1cd8e1da54c595b88b44"}

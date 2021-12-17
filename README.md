@@ -9,9 +9,11 @@ I thought that wasn't very cash money and learning to work with JSON objects sou
 The blockchain can be interacted with using either Postman or simple cURL commands to send POST/GET requests to the API to either:
 
 ```
-1. Mine a block /mine
-2. Submit a new transaction /transactions/new
-3. Request the blockchain history /chain
+1. Mine a block /mine 				\\ GET
+2. Submit a new transaction /transactions/new 	// POST
+3. Request the blockchain history /chain 	\\ GET
+4. Register a new node /nodes/register 		// POST
+5. Resolve chain data /nodes/resolve 		\\ GET
 ```
 
 install the requirements with
@@ -22,15 +24,22 @@ pip3 install -r requirements.txt
 
 Feel free to reimplement the code however you please.
 
-TO DO
+### chain.json
+Included with the repo is is a data directory containing a placeholder chain.json with 2 blocks.
+feel free to delete this file as the program will regenerate the directory and file if they are not present,
+any changes to the hardcoded genesis block will require a new chain to be made regardless.
+
+
 ```
-Integrate code to allow for nodes, whats a blockchain without decentralisation?
+TO DO
+
+Integrate code to allow for nodes, whats a blockchain without decentralisation? DONE [x]
 
 a fully hectic PoW algorithm (PoS actually stands for piece of shit)
 
-balance checking
+balance checking with public/private keys, UTXO's? I honestly am probably getting in over my head.
 
-an actual personal use case? apart from learning?
+an actual personal use case? apart from learning?  || WIP
 
 ```
 
