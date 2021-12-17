@@ -9,11 +9,12 @@ I thought that wasn't very cash money and learning to work with JSON objects sou
 The blockchain can be interacted with using either Postman or simple cURL commands to send POST/GET requests to the API to either:
 
 ```
-1. Mine a block /mine 				\\ GET
-2. Submit a new transaction /transactions/new 	// POST
-3. Request the blockchain history /chain 	\\ GET
-4. Register a new node /nodes/register 		// POST
-5. Resolve chain data /nodes/resolve 		\\ GET
+1. Mine a block /mine 					\\ GET
+2. Submit a new transaction /transactions/new 		// POST
+3. Request the blockchain history /chain 		\\ GET
+4. Register a new node /nodes/register 			// POST
+5. Resolve chain data /nodes/resolve 			\\ GET
+6. Recieve mined blocks from other nodes /broadcast 	//POST 
 ```
 
 install the requirements with
