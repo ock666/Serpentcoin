@@ -87,7 +87,7 @@ class Blockchain:
         self.current_transactions = []
 
         # append the block to the chain list
-        #self.chain.append(block)
+        self.chain.append(block)
         # we dont need this anymore as we're reading from the chain.json
         return block
 
