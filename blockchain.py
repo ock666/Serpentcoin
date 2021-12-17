@@ -74,6 +74,9 @@ class Blockchain:
         # function to write the new block to chain.json
         self.write_json(block)
 
+        # broadcast the block to the network
+        self.broadcast_block(block)
+
         # Reset the current list of transactions
         self.current_transactions = []
 
@@ -171,6 +174,20 @@ class Blockchain:
 
         return True
 
+    def broadcast_block(self, block):
+        nodes = self.nodes
+        current_time = str(time())
+        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+
+        for node in nodes:
+            response = requests.post(f'http://{node}/broadcast', json=block, headers=headers)
+
+            if response.status_code == 200:
+                print("Block broadcast accepted ", block, "\nby ", node, "at ", current_time)
+
+            else:
+                print("Block broadcast denied")
+
     def resolve_conflicts(self):
         """
         This is our Consensus Algorithm, it resolves conflicts
@@ -202,7 +219,12 @@ class Blockchain:
             self.chain = new_chain
             print("chain updated with", new_chain)
 
-            ##################### code dumping entire chain as one line ####################################
+            if os.path.exists('data/chain.json'):
+                os.remove('data/chain.json')
+                print("old chain removed, now writing new chain")
+            else:
+                print("no chain data found... Creating it now.")
+
             with open('data/chain.json', 'w') as f:
                 for i in self.chain:
                     string = json.dumps(i)
@@ -268,6 +290,32 @@ def new_transaction():
 
     response = {'message': f'Transaction will be added to Block {index}'}
     return jsonify(response), 201
+
+
+@app.route('/broadcast', methods=['POST'])
+def receive_block():
+    values = request.get_json()
+    last_proof = blockchain.last_block['proof']
+    new_proof = values['proof']
+    block_confirmed = blockchain.valid_proof(last_proof, new_proof)
+
+    if block_confirmed == True:
+        print('new block added to chain: ', values)
+        blockchain.write_json(values)
+        blockchain.chain.append(values)
+        response = {
+            'message': 'new block added to chain',
+            'block': values,
+        }
+        return jsonify(response), 200
+
+    if block_confirmed == False:
+        print("block proof not valid")
+        response = {
+            'message': 'block has invalid proof, skipping...',
+            'block': values,
+        }
+        return jsonify(response), 400
 
 
 @app.route('/chain', methods=['GET'])
