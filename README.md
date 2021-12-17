@@ -41,6 +41,8 @@ balance checking with public/private keys, UTXO's? I honestly am probably gettin
 
 an actual personal use case? apart from learning?  || WIP
 
+Block and transaction broadcast on network || WIP
+
 ```
 
 
