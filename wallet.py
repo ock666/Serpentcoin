@@ -7,9 +7,8 @@ from Crypto.PublicKey import RSA
 from Crypto.Hash import SHA256
 from Crypto.Hash import RIPEMD160
 from Crypto.Signature import pkcs1_15
-
 import Validation
-from Validation import enumerate_funds
+
 
 
 class Wallet:
@@ -18,8 +17,12 @@ class Wallet:
 
         if not os.path.isfile('data/wallet.json'):
             self.generate_wallet()
+        self.unix_time = time()
+        self.nodes = []
 
-        self.nodes = ['127.0.0.1:5000']
+        self.node = input("Please enter the IP or domain of a node:\n")
+        self.nodes.append(self.node)
+
         self.chain = self.get_chain()
 
         wallet_file = json.load(open('data/wallet.json', 'r'))
@@ -203,9 +206,9 @@ while True:
 
 
     if choice == 2:
-        time = time()
+        time = Wallet.unix_time
         recipient = input('Please enter recipient address: ')
-        amount = int(input('Please enter an amount: '))
+        amount = float(input('Please enter an amount: '))
         wallet.new_transaction(recipient, amount, time)
 
 

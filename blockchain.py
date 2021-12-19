@@ -423,7 +423,7 @@ def new_transaction():
     if Validation.validate_signature(values['public_key_hex'], values['signature'], trans_to_be_validated):
 
         if values['sender'] == 'Coinbase Reward' or Validation.enumerate_funds(
-                values['sender'], blockchain.chain) > values['amount']:
+                values['sender'], blockchain.chain) >= values['amount']:
             print('funds are available')
 
             # Create a new Transaction
@@ -444,12 +444,84 @@ def new_transaction():
         return jsonify(response), 460
 
 
+@app.route('/miners', methods=['POST'])
+def receive_proof():
+    values = request.get_json()
+    last_proof = blockchain.last_block['proof']
+    proof = values['proof']
+    confirming_address = values['public_key_hash']
+    previous_hash = values['previous_block_hash']
+    proof_valid = blockchain.valid_proof(last_proof, proof)
+    unix_time = time()
+
+    if proof_valid:
+        block_reward_transaction = {
+            'sender': 'Coinbase Reward',
+            'recipient': confirming_address,
+            'amount': 10,
+            'time_submitted': unix_time,
+            'previous_block_hash': previous_hash,
+            'public_key_hex': blockchain.public_key_hex
+        }
+
+        hashed_reward = blockchain.calculate_hash(json.dumps(block_reward_transaction, sort_keys=True))
+
+        block_reward_transaction_with_hash = {
+            'sender': 'Coinbase Reward',
+            'recipient': confirming_address,
+            'amount': 10,
+            'time_submitted': block_reward_transaction['time_submitted'],
+            'previous_block_hash': previous_hash,
+            'public_key_hex': blockchain.public_key_hex,
+            'transaction_hash': hashed_reward
+        }
+
+        signature = blockchain.sign(block_reward_transaction_with_hash)
+
+        full_block_reward_transaction = {
+            'sender': "Coinbase Reward",
+            'recipient': confirming_address,
+            'amount': 10,
+            'time_submitted': block_reward_transaction['time_submitted'],
+            'previous_block_hash': previous_hash,
+            'public_key_hex': blockchain.public_key_hex,
+            'transaction_hash': hashed_reward,
+            'signature': signature
+        }
+
+        if Validation.validate_signature(full_block_reward_transaction['public_key_hex'],
+                                         full_block_reward_transaction['signature'],
+                                         block_reward_transaction_with_hash):
+            # We must receive a reward for finding the proof.
+            # The sender is "0" to signify that this node has mined a new coin.
+            blockchain.new_transaction(full_block_reward_transaction['sender'],
+                                       full_block_reward_transaction['recipient'],
+                                       full_block_reward_transaction['amount'],
+                                       full_block_reward_transaction['time_submitted'],
+                                       full_block_reward_transaction['previous_block_hash'],
+                                       full_block_reward_transaction['public_key_hex'],
+                                       full_block_reward_transaction['transaction_hash'],
+                                       full_block_reward_transaction['signature'])
+            # Forge the new Block by adding it to the chain
+            previous_hash = blockchain.hash(blockchain.last_block)
+            block = blockchain.new_block(proof, previous_hash)
+            return block, 200
+
+@app.route('/nodes', methods=['GET'])
+def all_nodes():
+    response = {
+        'message': 'all nodes',
+        'total_nodes': list(blockchain.nodes),
+    }
+    return jsonify(response), 200
+
 @app.route('/broadcast', methods=['POST'])
 def receive_block():
     values = request.get_json()
     last_proof = blockchain.last_block['proof']
     new_proof = values['proof']
     block_confirmed = blockchain.valid_proof(last_proof, new_proof)
+
 
     if block_confirmed == True:
         print('new block added to chain: ', values)
@@ -520,4 +592,4 @@ def consensus():
 
 
 if __name__ == '__main__':
-    app.run(host='127.0.0.1', port=5000)
+    app.run(host='0.0.0.0', port=5000)
