@@ -1,2 +1,4 @@
-requests
-Flask
+requests~=2.26.0
+Flask~=2.0.2
+
+crypto~=1.4.1
