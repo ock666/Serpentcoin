@@ -12,12 +12,13 @@ import Validation
 
 
 class Wallet:
+    unix_time = time()
 
     def __init__(self):
 
         if not os.path.isfile('data/wallet.json'):
             self.generate_wallet()
-        self.unix_time = time()
+
         self.nodes = []
 
         self.node = input("Please enter the IP or domain of a node:\n")

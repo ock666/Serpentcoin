@@ -10,12 +10,27 @@ The blockchain can be interacted with using either Postman or simple cURL comman
 
 ```
 1. Mine a block /mine 					\\ GET
-2. Submit a new transaction /transactions/new 		// POST
-3. Request the blockchain history /chain 		\\ GET
-4. Register a new node /nodes/register 			// POST
-5. Resolve chain data /nodes/resolve 			\\ GET
-6. Receive mined blocks from other nodes /broadcast 	//POST 
 ```
+![postman mine request](pictures/postman-mine-get.png)
+```
+2. Submit a new transaction /transactions/new 		// POST
+```
+![wallet sending transaction](pictures/wallet-transaction.png)
+````
+3. Request the blockchain history /chain 		\\ GET
+````
+![postman chain request](pictures/postman-chain-get.png)
+``````
+4. Register a new node /nodes/register 			// POST
+``````
+![syntax for node registration](pictures/postman-node-register.png)
+``````````
+5. Resolve/update node chain data /nodes/resolve 			\\ GET
+``````````
+![postman resolve node chain](pictures/postman-resolve-node.png)
+````````
+6. Receive mined blocks from other nodes /broadcast 	//POST 
+````````
 
 install the requirements with
 
@@ -44,13 +59,18 @@ Upon receiving and verifying a new transaction nodes will broadcast the transact
 receiving nodes will check if the transaction is already in their mem-pool, perform their own validation; and either accept or deny the transaction.
 ### Simple wallet (wallet.py)
 a simple CLI wallet to send transactions to the blockchain node. 
+![wallet init](pictures/wallet-init.png)
+### Miner (miner.py)
+a miner which gets the last block and performs proof of work, submits the proof to a node upon completion for the block reward
+![miner.py](pictures/miner-and-chain.png)
+
 
 ```
 TO DO
 
 implement signature validation within amount validation for extra security
 
-continue work on the wallet.py, it is currently quite rudimentary and has a type error with the time() function occuring after sending a transaction and attempting to send another
+continue work on the wallet.py, it is currently quite rudimentary.
 
 Fix up some of the response codes and json messages between the wallet.py and blockchain.py
 
