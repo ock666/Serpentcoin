@@ -8,7 +8,7 @@ from Crypto.Hash import SHA256
 from Crypto.Hash import RIPEMD160
 from Crypto.Signature import pkcs1_15
 import Validation
-
+import PySimpleGUI as sg
 
 
 class Wallet:
@@ -21,8 +21,20 @@ class Wallet:
 
         self.nodes = []
 
-        self.node = input("Please enter the IP or domain of a node:\n")
+        # GUI INIT
+        layout = [[sg.Text('Please enter the address/ip and port of a known node')],
+                  [sg.InputText()],
+                  [sg.Submit(), sg.Cancel()]]
+
+        window = sg.Window('Wallet waiting to connect...', layout)
+
+        event, values = window.read()
+        window.close()
+
+        self.node = values[0]
         self.nodes.append(self.node)
+
+        sg.popup("Connecting to ", values[0])
 
         self.chain = self.get_chain()
 
@@ -38,11 +50,6 @@ class Wallet:
         if not os.path.isfile('data/wallet.json'):
             self.generate_wallet()
 
-
-
-
-
-
     def get_balance(self):
         chain_balance = Validation.enumerate_funds(self.public_key_hash, self.chain)
         if chain_balance > 0:
@@ -50,8 +57,6 @@ class Wallet:
 
         if chain_balance == False:
             return 0
-
-
 
     def generate_wallet(self):
 
@@ -126,9 +131,13 @@ class Wallet:
             'transaction_hash': hashed_trans,
             'signature': signed_trans
         }
-        print(json.dumps(full_transaction, indent=2))
-        self.broadcast_transaction(full_transaction)
-        self.chain = self.get_chain()
+
+        if self.broadcast_transaction(full_transaction):
+            self.chain = self.get_chain()
+            return True
+        else:
+            self.chain = self.get_chain()
+            return False
 
     def broadcast_transaction(self, transaction):
 
@@ -137,11 +146,10 @@ class Wallet:
         for node in self.nodes:
             response = requests.post(f'http://{node}/transactions/new', json=transaction, headers=headers)
             if response.status_code == 201:
-                print("Transaction broadcast accepted\n", json.dumps(transaction, indent=2), "\nby ", node)
+                return True
 
             else:
-                print("Transaction broadcast denied")
-                print(response)
+                return False
 
     def sign_transaction_data(self, data):
         transaction_bytes = json.dumps(data, sort_keys=True).encode('utf-8')
@@ -184,34 +192,73 @@ class Wallet:
             return chain
 
 
-
-
-
 wallet = Wallet()
 
+layout = [
+    [sg.Text('Welcome to the Python-blockchain wallet')],
+    [sg.Text('Your blockchain address'), sg.Text(wallet.public_key_hash)],
+    [sg.Text("Available Funds: "), sg.Text(wallet.get_balance(), key='-BALANCE-')],
+    [sg.Button('Update Blockchain'), sg.Button('Transaction History')],
+    [sg.Text("Address: "), sg.InputText(key='-ADDRESS-', size=(20, 20)), sg.Text("Amount: "),
+     sg.InputText(key='-AMOUNT-', size=(8, 20)), sg.Button('Send Transaction')],
+    [sg.Button('Exit')]
+]
 
-
+window = sg.Window('Python-blockchain Wallet', layout)
 while True:
-    ##CLI API FOR WALLET
-    print('Availables Funds: ', wallet.get_balance(), "\n\n\n")
+    event, values = window.read()
+    if event in (sg.WIN_CLOSED, 'Exit'):
+        break
 
-    print('Welcome to the Wallet\nWhat would you like to do?: \n')
-    print('1. Update the blockchain')
-    print('2. Send Funds')
-    print('3. Receive Funds')
-    choice = int(input('Select a number: '))
-
-    if choice == 1:
+    if event in 'Update Blockchain':
         wallet.chain = wallet.get_chain()
-        print("Blockchain Updated")
+        wallet.get_balance()
+        window['-BALANCE-'].update(wallet.get_balance())
 
+    if event in 'Transaction History':
+        window.close()
+        # code to find relevant transactions in the blockchain pertaining to our wallets address
+        chain = wallet.get_chain()  # get the chain
+        sent = []  # list for storing sent transactions
+        received = []  # list for storing received transactions
+        for block in chain:  # iterate through the blockchain
+            for transaction in block['transactions']:
+                # code to find received transactions
+                if transaction['recipient'] == wallet.public_key_hash:
+                    print("received: ", transaction)
+                    received.append(transaction)
+                # code to find sent transactions
+                if transaction['sender'] == wallet.public_key_hash:
+                    print("sent: ", transaction)
+                    sent.append(transaction)
+                else:
+                    continue
 
-    if choice == 2:
-        time = Wallet.unix_time
-        recipient = input('Please enter recipient address: ')
-        amount = float(input('Please enter an amount: '))
-        wallet.new_transaction(recipient, amount, time)
+        sent_json = json.dumps(sent, indent=2)
+        received_json = json.dumps(received, indent=2)
 
+        transaction_window_layout = [
+            [sg.Text("Sent Transactions:")],
+            [sg.Multiline(sent_json, size=(100, 25))],
+            [sg.Text("Received Transactions:")],
+            [sg.Multiline(received_json, size=(100, 25))],
 
-    if choice == 3:
-        print('Your Address: ', wallet.public_key_hash)
+            [sg.Button('Exit')]
+        ]
+        transaction_window = sg.Window('Transaction History', transaction_window_layout)
+        events, values = transaction_window.read()
+        if event in 'Exit':
+            transaction_window.close()
+
+    if event in 'Send Transaction':
+        time = wallet.unix_time
+        recipient = values['-ADDRESS-']
+        amount = float(values['-AMOUNT-'])
+        if wallet.new_transaction(recipient, amount, time):
+            sg.popup(
+                'Transaction submitted and accepted by network...\nPlease wait for next block confirmation for transaction to confirm')
+        else:
+            sg.popup(
+                'Transaction denied by network\nyou either have unconfirmed transactions in the mempool or insufficient balance.\nPlease try again')
+
+window.close()
