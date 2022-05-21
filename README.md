@@ -50,13 +50,16 @@ The transaction will be denied.
 Upon receiving and verifying a new transaction nodes will broadcast the transaction to other nodes,
 receiving nodes will check if the transaction is already in their mem-pool, perform their own validation; and either accept or deny the transaction.
 ### GUI wallet (wallet.py)
-a simple GUI wallet to send transactions to the blockchain node. 
+a simple GUI wallet to send transactions to the blockchain node.
+
 ![wallet init](pictures/wallet-init.png)
 ### Miner (miner.py)
 a miner which gets the last block and performs proof of work, submits the proof to a node upon completion for the block reward
+
 ![miner.py](pictures/miner-and-chain.png)
 ### Transaction History
 view your transaction history within the wallet
+
 ![wallet-transaction-history](pictures/wallet-transaction-history.png)
 
 
