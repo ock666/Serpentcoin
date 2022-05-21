@@ -317,73 +317,73 @@ blockchain = Blockchain()
 node_identifier = blockchain.public_key_hash
 
 
-@app.route('/mine', methods=['GET'])
-def mine():
+#@app.route('/mine', methods=['GET'])
+#def mine():
     # We run the proof of work algorithm to get the next proof...
-    last_block = blockchain.last_block
-    last_proof = last_block['proof']
-    proof = blockchain.proof_of_work(last_proof)
+#    last_block = blockchain.last_block
+#    last_proof = last_block['proof']
+#    proof = blockchain.proof_of_work(last_proof)
 
-    unix_time = time()
+#    unix_time = time()
 
-    block_reward_transaction = {
-        'sender': 'Coinbase Reward',
-        'recipient': node_identifier,
-        'amount': 10,
-        'time_submitted': unix_time,
-        'previous_block_hash': blockchain.hash(last_block),
-        'public_key_hex': blockchain.public_key_hex
-    }
+#    block_reward_transaction = {
+#        'sender': 'Coinbase Reward',
+#        'recipient': node_identifier,
+#        'amount': 10,
+#        'time_submitted': unix_time,
+#        'previous_block_hash': blockchain.hash(last_block),
+#        'public_key_hex': blockchain.public_key_hex
+#    }
 
-    hashed_reward = blockchain.calculate_hash(json.dumps(block_reward_transaction, sort_keys=True))
+#    hashed_reward = blockchain.calculate_hash(json.dumps(block_reward_transaction, sort_keys=True))
 
-    block_reward_transaction_with_hash = {
-        'sender': "Coinbase Reward",
-        'recipient': node_identifier,
-        'amount': 10,
-        'time_submitted': block_reward_transaction['time_submitted'],
-        'previous_block_hash': blockchain.hash(last_block),
-        'public_key_hex': blockchain.public_key_hex,
-        'transaction_hash': hashed_reward
-    }
+#    block_reward_transaction_with_hash = {
+#        'sender': "Coinbase Reward",
+#        'recipient': node_identifier,
+#        'amount': 10,
+#        'time_submitted': block_reward_transaction['time_submitted'],
+#        'previous_block_hash': blockchain.hash(last_block),
+#        'public_key_hex': blockchain.public_key_hex,
+#        'transaction_hash': hashed_reward
+#    }
 
-    signature = blockchain.sign(block_reward_transaction_with_hash)
+#    signature = blockchain.sign(block_reward_transaction_with_hash)
 
-    full_block_reward_transaction = {
-        'sender': "Coinbase Reward",
-        'recipient': node_identifier,
-        'amount': 10,
-        'time_submitted': block_reward_transaction['time_submitted'],
-        'previous_block_hash': blockchain.hash(last_block),
-        'public_key_hex': blockchain.public_key_hex,
-        'transaction_hash': hashed_reward,
-        'signature': signature
-    }
-    if Validation.validate_signature(full_block_reward_transaction['public_key_hex'],
-                                     full_block_reward_transaction['signature'], block_reward_transaction_with_hash):
+#    full_block_reward_transaction = {
+#        'sender': "Coinbase Reward",
+#        'recipient': node_identifier,
+#        'amount': 10,
+#        'time_submitted': block_reward_transaction['time_submitted'],
+#        'previous_block_hash': blockchain.hash(last_block),
+#        'public_key_hex': blockchain.public_key_hex,
+#        'transaction_hash': hashed_reward,
+#        'signature': signature
+#    }
+#    if Validation.validate_signature(full_block_reward_transaction['public_key_hex'],
+#                                     full_block_reward_transaction['signature'], block_reward_transaction_with_hash):
         # We must receive a reward for finding the proof.
         # The sender is "0" to signify that this node has mined a new coin.
-        blockchain.new_transaction(full_block_reward_transaction['sender'], full_block_reward_transaction['recipient'],
-                                   full_block_reward_transaction['amount'],
-                                   full_block_reward_transaction['time_submitted'],
-                                   full_block_reward_transaction['previous_block_hash'],
-                                   full_block_reward_transaction['public_key_hex'],
-                                   full_block_reward_transaction['transaction_hash'],
-                                   full_block_reward_transaction['signature'])
+#        blockchain.new_transaction(full_block_reward_transaction['sender'], full_block_reward_transaction['recipient'],
+#                                   full_block_reward_transaction['amount'],
+#                                   full_block_reward_transaction['time_submitted'],
+#                                   full_block_reward_transaction['previous_block_hash'],
+#                                   full_block_reward_transaction['public_key_hex'],
+#                                   full_block_reward_transaction['transaction_hash'],
+#                                   full_block_reward_transaction['signature'])
 
         # Forge the new Block by adding it to the chain
-        previous_hash = blockchain.hash(last_block)
-        block = blockchain.new_block(proof, previous_hash)
+#        previous_hash = blockchain.hash(last_block)
+#        block = blockchain.new_block(proof, previous_hash)
+#
+#        response = {
+#            'message': "New Block Forged",
+#            'index': block['index'],
+#            'transactions': block['transactions'],
+#            'proof': block['proof'],
+#            'previous_hash': block['previous_hash'],
+#        }
 
-        response = {
-            'message': "New Block Forged",
-            'index': block['index'],
-            'transactions': block['transactions'],
-            'proof': block['proof'],
-            'previous_hash': block['previous_hash'],
-        }
-
-    return jsonify(response), 200
+#    return jsonify(response), 200
 
 
 @app.route('/transactions/new', methods=['POST'])
