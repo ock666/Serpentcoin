@@ -456,7 +456,7 @@ def receive_proof():
 
     if not proof_valid:
         print("stale proof")
-        return 400
+        return "invalid proof", 400
 
     if proof_valid:
         block_reward_transaction = {
