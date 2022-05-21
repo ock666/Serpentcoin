@@ -5,8 +5,6 @@ import os
 import json
 import utils
 from Crypto.PublicKey import RSA
-import threading
-from random import randint
 
 class Miner:
 
@@ -27,14 +25,13 @@ class Miner:
     def proof_of_work(self, last_proof):
         """
         Simple Proof of Work Algorithm:
-         - Find a number p' such that hash(pp') contains leading 8 zeroes, where p is the previous p'
+         - Find a number p' such that hash(pp') contains leading 4 zeroes, where p is the previous p'
          - p is the previous proof, and p' is the new proof
         """
+
         proof = 0
         while self.valid_proof(last_proof, proof) is False:
-            proof = randint(1, 999999999)
-
-
+            proof += 1
 
         return proof
 
@@ -63,10 +60,8 @@ class Miner:
             return chain[length - 1]
 
     def get_last_proof(self):
-        threading.Timer(30.0, self.get_last_proof).start()
         last_block = self.get_last_block()
         last_block_proof = last_block['proof']
-        print("!!PROOF UPDATE!!", last_block_proof)
         return last_block_proof
 
     def get_last_hash(self):
@@ -82,7 +77,6 @@ class Miner:
         while True:
             last_proof = self.get_last_proof()
             proof = self.proof_of_work(last_proof)
-
 
 
             if self.valid_proof(last_proof, proof):
