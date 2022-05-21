@@ -9,27 +9,23 @@ I thought that wasn't very cash money and learning to work with JSON objects sou
 The blockchain can be interacted with using either Postman or simple cURL commands to send POST/GET requests to the API to either:
 
 ```
-1. Mine a block /mine 					\\ GET
-```
-![postman mine request](pictures/postman-mine-get.png)
-```
-2. Submit a new transaction /transactions/new 		// POST
+1. Submit a new transaction /transactions/new 		// POST
 ```
 ![wallet sending transaction](pictures/wallet-transaction.png)
 ````
-3. Request the blockchain history /chain 		\\ GET
+2. Request the blockchain history /chain 		\\ GET
 ````
 ![postman chain request](pictures/postman-chain-get.png)
 ``````
-4. Register a new node /nodes/register 			// POST
+3. Register a new node /nodes/register 			// POST
 ``````
 ![syntax for node registration](pictures/postman-node-register.png)
 ``````````
-5. Resolve/update node chain data /nodes/resolve 			\\ GET
+4. Resolve/update node chain data /nodes/resolve 			\\ GET
 ``````````
 ![postman resolve node chain](pictures/postman-resolve-node.png)
 ````````
-6. Receive mined blocks from other nodes /broadcast 	//POST 
+5. Receive mined blocks from other nodes /broadcast 	//POST 
 ````````
 
 install the requirements with
@@ -70,7 +66,7 @@ TO DO
 
 implement signature validation within amount validation for extra security
 
-continue work on the wallet.py, it is currently quite rudimentary.
+continue work on the wallet.py, it is currently quite rudimentary. || WIP
 
 Fix up some of the response codes and json messages between the wallet.py and blockchain.py
 
@@ -81,6 +77,7 @@ Block and transaction broadcast on network || DONE [x]
 balance checking with public/private keys, UTXO's? DONE [x]
 
 a fully hectic PoW algorithm (PoS actually stands for piece of shit)
+Also, finding a more efficient and randomised way of finding proofs so it isnt just the fastest node to find the proof everytime.
 
 an actual personal use case? apart from learning?  || WIP
 
