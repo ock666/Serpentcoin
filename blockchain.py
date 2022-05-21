@@ -149,18 +149,6 @@ class Blockchain:
         block_string = json.dumps(block, sort_keys=True).encode()
         return hashlib.sha256(block_string).hexdigest()
 
-    def proof_of_work(self, last_proof):
-        """
-        Simple Proof of Work Algorithm:
-         - Find a number p' such that hash(pp') contains leading 4 zeroes, where p is the previous p'
-         - p is the previous proof, and p' is the new proof
-        """
-
-        proof = 0
-        while self.valid_proof(last_proof, proof) is False:
-            proof += 1
-
-        return proof
 
     @staticmethod
     def valid_proof(last_proof, proof):
@@ -173,7 +161,7 @@ class Blockchain:
 
         guess = f'{last_proof}{proof}'.encode()
         guess_hash = hashlib.sha256(guess).hexdigest()
-        return guess_hash[:6] == "000000"
+        return guess_hash[:8] == "00000000"
 
     def register_node(self, address):
         """
