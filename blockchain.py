@@ -161,7 +161,7 @@ class Blockchain:
 
         guess = f'{last_proof}{proof}'.encode()
         guess_hash = hashlib.sha256(guess).hexdigest()
-        return guess_hash[:8] == "00000000"
+        return guess_hash[:7] == "0000000"
 
     def register_node(self, address):
         """
