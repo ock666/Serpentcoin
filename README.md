@@ -8,31 +8,27 @@ I thought that wasn't very cash money and learning to work with JSON objects sou
 
 The blockchain can be interacted with using either Postman or simple cURL commands to send POST/GET requests to the API to either:
 
-```
-1. Submit a new transaction /transactions/new 		// POST
-```
-![wallet sending transaction](pictures/wallet-transaction.png)
 ````
-2. Request the blockchain history /chain 		\\ GET
+1. Request the blockchain history /chain 		\\ GET
 ````
 ![postman chain request](pictures/postman-chain-get.png)
 ``````
-3. Register a new node /nodes/register 			// POST
+2. Register a new node /nodes/register 			// POST
 ``````
 ![syntax for node registration](pictures/postman-node-register.png)
 ``````````
-4. Resolve/update node chain data /nodes/resolve 			\\ GET
+3. Resolve/update node chain data /nodes/resolve 			\\ GET
 ``````````
 ![postman resolve node chain](pictures/postman-resolve-node.png)
-````````
-5. Receive mined blocks from other nodes /broadcast 	//POST 
-````````
+
+
+
 
 install the requirements with
 
-```
+````
 pip3 install -r requirements.txt
-```
+````
 
 Feel free to reimplement the code however you please.
 
@@ -53,12 +49,15 @@ The transaction will be denied.
 ### Transaction Broadcast
 Upon receiving and verifying a new transaction nodes will broadcast the transaction to other nodes,
 receiving nodes will check if the transaction is already in their mem-pool, perform their own validation; and either accept or deny the transaction.
-### Simple wallet (wallet.py)
-a simple CLI wallet to send transactions to the blockchain node. 
+### GUI wallet (wallet.py)
+a simple GUI wallet to send transactions to the blockchain node. 
 ![wallet init](pictures/wallet-init.png)
 ### Miner (miner.py)
 a miner which gets the last block and performs proof of work, submits the proof to a node upon completion for the block reward
 ![miner.py](pictures/miner-and-chain.png)
+### Transaction History
+view your transaction history within the wallet
+![wallet-transaction-history](pictures/wallet-transaction-history.png)
 
 ```
 Future Feature List
