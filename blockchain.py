@@ -454,6 +454,10 @@ def receive_proof():
     proof_valid = blockchain.valid_proof(last_proof, proof)
     unix_time = time()
 
+    if not proof_valid:
+        print("stale proof")
+        return 400
+
     if proof_valid:
         block_reward_transaction = {
             'sender': 'Coinbase Reward',

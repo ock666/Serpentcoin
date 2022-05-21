@@ -96,6 +96,9 @@ class Miner:
                     print('New Block Forged! Proof Accepted ', proof)
                     time.sleep(5)
 
+                if response.status_code == 400:
+                    print("stale proof submitted, getting new proof")
+
 
 
 
