@@ -90,7 +90,7 @@ class Miner:
         while True:
             last_proof = self.get_last_proof()
             proof = self.proof_of_work(last_proof)
-            print("last_proof)
+            print("last_proof")
 
             if self.valid_proof(last_proof, proof):
                 print('Proof Found: ', proof)
