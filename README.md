@@ -64,7 +64,10 @@ view your transaction history within the wallet
 
 
 Future Feature List
-Persistence of nodes within the blockchain.py, ideally nodes should remember which nodes they have connected and validated with in the past and they should do this automagically when start up occurs, and begin to resolve their own chain with the longest valid node chain on the network. Ideally each entry in a node file list should be signed as to ensure integrity and authenticity of the nodes, however implementing additional validation steps should likely avert any tampering between downtime of communication between nodes.
+
+Node Persistence
+
+
 
 
 ```
@@ -72,7 +75,7 @@ TO DO
 
 implement signature validation within amount validation for extra security
 
-continue work on the wallet.py, it is currently quite rudimentary. || WIP
+continue work on the wallet.py, The GUI is much better than CLI, but it could use some touches || WIP
 
 Fix up some of the response codes and json messages between the wallet.py and blockchain.py
 
