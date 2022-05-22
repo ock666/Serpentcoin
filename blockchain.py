@@ -27,7 +27,13 @@ class Blockchain:
         # set for storing nodes
         self.nodes = set()
 
+        # port to run blockchain on
         self.port = input("Please input port number for chain to run on\n")
+
+        #mining difficulty
+        self.difficulty = 6
+
+
         # what to do if the directory 'data' is not present, if not present; creates it.
         if not os.path.exists('data'):
             os.makedirs('data')
@@ -96,6 +102,23 @@ class Blockchain:
 
         return block_with_hash
 
+    def difficulty_adjust(self, interval):
+        if interval < 650:
+            blockchain.difficulty += 1
+            print("difficulty increased")
+
+        if interval > 550:
+            blockchain.difficulty - 1
+            print("difficulty decreased")
+
+
+    def block_timing(self, new_block, last_block):
+        new_block_time = new_block['timestamp']
+        last_block_time = last_block['timestamp']
+        interval = new_block_time - last_block_time
+        return interval
+
+
     def write_json(self, data, filename='data/chain.json'):
         # opens the file in append mode
         with open(filename, 'a') as file:
@@ -111,6 +134,11 @@ class Blockchain:
             'proof': proof,
             'previous_hash': previous_hash
         }
+
+        # block timing checks
+        last_block = self.last_block
+        timing = self.block_timing(block, last_block)
+        self.difficulty_adjust(timing)
 
         block_hash = self.hash(block)
 
@@ -134,6 +162,8 @@ class Blockchain:
 
         # append the block to the chain list
         self.chain.append(block_with_hash)
+
+
 
         return block_with_hash
 
@@ -201,10 +231,29 @@ class Blockchain:
         :param proof: Current Proof
         :return: True if correct, False if not.
         """
-
+        difficulty = blockchain.difficulty
         guess = f'{last_proof}{proof}'.encode()
         guess_hash = hashlib.sha256(guess).hexdigest()
-        return guess_hash[:6] == "000000"
+        if difficulty == 1:
+            return guess_hash[:1] == "0"
+        if difficulty == 2:
+            return guess_hash[:2] == "00"
+        if difficulty == 3:
+            return guess_hash[:3] == "000"
+        if difficulty == 4:
+            return guess_hash[:4] == "0000"
+        if difficulty == 5:
+            return guess_hash[:5] == "00000"
+        if difficulty == 6:
+            return guess_hash[:6] == "000000"
+        if difficulty == 7:
+            return guess_hash[:7] == "0000000"
+        if difficulty == 8:
+            return guess_hash[:8] == "00000000"
+        if difficulty == 9:
+            return guess_hash[:9] == "000000000"
+        if difficulty >= 10:
+            return guess_hash[:10] == "0000000000"
 
     def register_node(self, address):
         """
@@ -443,6 +492,8 @@ def new_transaction():
         return jsonify(response), 460
 
 
+
+
 @app.route('/miners', methods=['POST'])
 def receive_proof():
     #table for storing received json
@@ -558,6 +609,13 @@ def receive_block():
             'block': values,
         }
         return jsonify(response), 400
+
+
+@app.route('/difficulty', methods=['GET'])
+def current_difficulty():
+    difficulty = blockchain.difficulty
+    return jsonify(difficulty), 200
+
 
 @app.route('/proof', methods=['GET'])
 def last_proof():

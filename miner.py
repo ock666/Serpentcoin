@@ -26,7 +26,7 @@ class Miner:
         self.public_key_hash = wallet_file['public key hash']
 
 
-    def proof_of_work(self, last_proof):
+    def proof_of_work(self, last_proof, difficulty):
         """
         Simple Proof of Work Algorithm:
          - Find a number p' such that hash(pp') contains leading 4 zeroes, where p is the previous p'
@@ -35,14 +35,14 @@ class Miner:
 
         proof = 0
 
-        while self.valid_proof(last_proof, proof) is False:
+        while self.valid_proof(last_proof, proof, difficulty) is False:
             proof = random.randint(1, 99999999)
 
 
         return proof
 
     @staticmethod
-    def valid_proof(last_proof, proof):
+    def valid_proof(last_proof, proof, difficulty):
         """
         Validates the Proof
         :param last_proof: Previous Proof
@@ -52,8 +52,24 @@ class Miner:
 
         guess = f'{last_proof}{proof}'.encode()
         guess_hash = hashlib.sha256(guess).hexdigest()
-
-        return guess_hash[:6] == "000000"
+        if difficulty == 1:
+            return guess_hash[:1] == "0"
+        if difficulty == 2:
+            return guess_hash[:2] == "00"
+        if difficulty == 3:
+            return guess_hash[:3] == "000"
+        if difficulty == 4:
+            return guess_hash[:4] == "0000"
+        if difficulty == 5:
+            return guess_hash[:5] == "00000"
+        if difficulty == 6:
+            return guess_hash[:6] == "000000"
+        if difficulty == 7:
+            return guess_hash[:7] == "0000000"
+        if difficulty == 8:
+            return guess_hash[:8] == "00000000"
+        if difficulty == 9:
+            return guess_hash[:9] == "000000000"
 
     def get_last_block(self):
 
@@ -72,6 +88,13 @@ class Miner:
             return response.json()
         else:
             print("couldn't obtain proof")
+
+    def get_difficulty(self):
+        response = requests.get(f'http://{self.node}/difficulty')
+        if response.status_code == 200:
+            return response.json()
+        else:
+            print("couldn't obtain difficulty")
 
     def get_last_hash(self):
         last_block = self.get_last_block()
@@ -92,10 +115,14 @@ class Miner:
     def mine(self):
         while True:
             last_proof = self.get_last_proof()
-            proof = self.proof_of_work(last_proof)
+            difficulty = self.get_difficulty()
             print("Last Proof: ", last_proof)
+            print("Difficulty: ", difficulty)
 
-            if self.valid_proof(last_proof, proof):
+            proof = self.proof_of_work(last_proof, difficulty)
+
+
+            if self.valid_proof(last_proof, proof, difficulty):
                 print('Proof Found: ', proof)
                 headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
 
