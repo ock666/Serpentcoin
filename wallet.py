@@ -9,7 +9,7 @@ from Crypto.Hash import RIPEMD160
 from Crypto.Signature import pkcs1_15
 import Validation
 import PySimpleGUI as sg
-
+import hashlib
 
 class Wallet:
     unix_time = time()
@@ -76,6 +76,12 @@ class Wallet:
         }
         self.write_json(wallet_data, 'w')
 
+    @staticmethod
+    def hash(block):
+        # We must make sure that the Dictionary is Ordered, or we'll have inconsistent hashes
+        block_string = json.dumps(block, sort_keys=True).encode()
+        return hashlib.sha256(block_string).hexdigest()
+
     def calculate_hash(self, data, hash_function):
         data = bytearray(data, "utf-8")
         if hash_function == "sha256":
@@ -107,7 +113,7 @@ class Wallet:
             'public_key_hex': self.public_key_hex
         }
 
-        hashed_trans = self.calculate_hash(json.dumps(trans_data, sort_keys=True), "sha256")
+        hashed_trans = self.hash(trans_data)
 
         trans_with_hash = {
             'sender': sender,
