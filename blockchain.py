@@ -559,6 +559,12 @@ def receive_block():
         }
         return jsonify(response), 400
 
+@app.route('/proof', methods=['GET'])
+def last_proof():
+    last_block = blockchain.last_block
+    proof = last_block['proof']
+    return jsonify(proof), 200
+
 
 @app.route('/chain', methods=['GET'])
 def full_chain():

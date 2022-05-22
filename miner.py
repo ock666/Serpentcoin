@@ -66,9 +66,12 @@ class Miner:
             return chain[length - 1]
 
     def get_last_proof(self):
-        last_block = self.get_last_block()
-        last_block_proof = last_block['proof']
-        return last_block_proof
+        response = requests.get(f'http://{self.node}/proof')
+
+        if response.status_code == 200:
+            return response.json()
+        else:
+            print("couldn't obtain proof")
 
     def get_last_hash(self):
         last_block = self.get_last_block()
@@ -90,7 +93,7 @@ class Miner:
         while True:
             last_proof = self.get_last_proof()
             proof = self.proof_of_work(last_proof)
-            print("last_proof")
+            print("Last Proof: ", last_proof)
 
             if self.valid_proof(last_proof, proof):
                 print('Proof Found: ', proof)
@@ -124,13 +127,7 @@ class Miner:
                 if response.status_code == 400:
                     print("stale proof submitted, getting new proof")
 
-
-
-
-
-
-
-
 Miner = Miner()
 
 Miner.mine()
+
