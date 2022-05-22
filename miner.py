@@ -9,6 +9,7 @@ from Crypto.PublicKey import RSA
 import random
 from Crypto.Signature import pkcs1_15
 from Crypto.Hash import SHA256
+import threading
 
 class Miner:
 
@@ -18,6 +19,9 @@ class Miner:
 
         if not os.path.isfile('data/wallet.json'):
             utils.generate_wallet()
+
+        threading.Timer.daemon = True
+
 
         wallet_file = json.load(open('data/wallet.json', 'r'))
         self.private_key = RSA.import_key(wallet_file['private key'])
@@ -36,7 +40,7 @@ class Miner:
         proof = 0
 
         while self.valid_proof(last_proof, proof, difficulty) is False:
-            proof = random.randint(1, 99999999)
+            proof = random.randint(1, 999999999999)
 
 
         return proof
@@ -68,7 +72,7 @@ class Miner:
             return guess_hash[:7] == "0000000"
         if difficulty == 8:
             return guess_hash[:8] == "00000000"
-        if difficulty == 9:
+        if difficulty >= 9:
             return guess_hash[:9] == "000000000"
 
     def get_last_block(self):
@@ -83,7 +87,6 @@ class Miner:
 
     def get_last_proof(self):
         response = requests.get(f'http://{self.node}/proof')
-
         if response.status_code == 200:
             return response.json()
         else:
@@ -111,9 +114,16 @@ class Miner:
         signature_hex = binascii.hexlify(self.sign_transaction_data(data)).decode("utf-8")
         return signature_hex
 
+    def update_values(self):
+        threading.Timer(45.0, self.update_values).start()
+        self.get_last_proof()
+        self.get_difficulty()
+
+
 
     def mine(self):
         while True:
+            self.update_values()
             last_proof = self.get_last_proof()
             difficulty = self.get_difficulty()
             print("Last Proof: ", last_proof)
@@ -153,6 +163,8 @@ class Miner:
 
                 if response.status_code == 400:
                     print("stale proof submitted, getting new proof")
+
+
 
 Miner = Miner()
 
