@@ -108,14 +108,18 @@ class Blockchain:
             print("difficulty increased")
 
         if interval > 550:
-            blockchain.difficulty - 1
+            blockchain.difficulty -= 1
             print("difficulty decreased")
+
+        if interval > 550 and interval < 650:
+            print("Difficulty level stable")
 
 
     def block_timing(self, new_block, last_block):
         new_block_time = new_block['timestamp']
         last_block_time = last_block['timestamp']
         interval = new_block_time - last_block_time
+        print("Block interval time: ", interval)
         return interval
 
 
@@ -137,6 +141,7 @@ class Blockchain:
 
         # block timing checks
         last_block = self.last_block
+        print(last_block)
         timing = self.block_timing(block, last_block)
         self.difficulty_adjust(timing)
 
@@ -341,7 +346,6 @@ class Blockchain:
 
     def sign_transaction_data(self, data):
         transaction_bytes = json.dumps(data, sort_keys=True).encode('utf-8')
-        print(transaction_bytes)
         hash_object = SHA256.new(transaction_bytes)
         signature = pkcs1_15.new(self.private_key).sign(hash_object)
         return signature
@@ -436,7 +440,7 @@ def new_transaction():
 
 
 
-    print("New transaction: ", values, "\n...Validating...")
+    print("New transaction!\n...Validating...")
 
     trans_to_be_hashed = {
         'sender': values['sender'],
@@ -564,7 +568,7 @@ def receive_proof():
                                        full_block_reward_transaction['signature'])
                 # Forge the new Block by adding it to the chain
             block = blockchain.new_block(proof, unix_time, previous_hash)
-            print("New block forged at: ", unix_time, " by ", confirming_address)
+
             return block, 200
         if not Validation.validate_signature(public_key_hex, signature, trans_data):
             print('signature failed verification')

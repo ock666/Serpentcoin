@@ -11,6 +11,7 @@ from Crypto.Signature import pkcs1_15
 from Crypto.Hash import SHA256
 import threading
 
+
 class Miner:
 
     def __init__(self):
@@ -22,13 +23,11 @@ class Miner:
 
         threading.Timer.daemon = True
 
-
         wallet_file = json.load(open('data/wallet.json', 'r'))
         self.private_key = RSA.import_key(wallet_file['private key'])
         self.public_key = RSA.import_key(wallet_file['public key'])
         self.public_key_hex = wallet_file['public key hex']
         self.public_key_hash = wallet_file['public key hash']
-
 
     def proof_of_work(self, last_proof, difficulty):
         """
@@ -40,8 +39,7 @@ class Miner:
         proof = 0
 
         while self.valid_proof(last_proof, proof, difficulty) is False:
-            proof = random.randint(1, 999999999999)
-
+            proof += 1  # random.randint(1, 99999999999)
 
         return proof
 
@@ -114,23 +112,16 @@ class Miner:
         signature_hex = binascii.hexlify(self.sign_transaction_data(data)).decode("utf-8")
         return signature_hex
 
-    def update_values(self):
-        threading.Timer(45.0, self.update_values).start()
-        self.get_last_proof()
-        self.get_difficulty()
-
-
-
     def mine(self):
         while True:
-            self.update_values()
+
             last_proof = self.get_last_proof()
             difficulty = self.get_difficulty()
+
             print("Last Proof: ", last_proof)
             print("Difficulty: ", difficulty)
 
             proof = self.proof_of_work(last_proof, difficulty)
-
 
             if self.valid_proof(last_proof, proof, difficulty):
                 print('Proof Found: ', proof)
@@ -165,8 +156,6 @@ class Miner:
                     print("stale proof submitted, getting new proof")
 
 
-
 Miner = Miner()
 
 Miner.mine()
-
