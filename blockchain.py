@@ -11,12 +11,15 @@ from flask import Flask, jsonify, request
 from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
 import utils
+import logging
 
 
 class Blockchain:
     def __init__(self):
 
-
+        # silence flask console
+        log = logging.getLogger('werkzeug')
+        log.setLevel(logging.ERROR)
 
         # list for storing the chain
         self.chain = []
@@ -102,11 +105,6 @@ class Blockchain:
 
 
 
-    def block_timing(self, new_block, last_block):
-        new_block_time = new_block['timestamp']
-        last_block_time = last_block['timestamp']
-        interval = new_block_time - last_block_time
-        return interval
 
 
     def write_json(self, data, filename='data/chain.json'):
@@ -207,7 +205,7 @@ class Blockchain:
         """
         guess = f'{last_proof}{proof}'.encode()
         guess_hash = hashlib.sha256(guess).hexdigest()
-        return guess_hash[:7] == "0000000"
+        return guess_hash[:6] == "000000"
 
 
     def register_node(self, address):
@@ -543,7 +541,7 @@ def receive_block():
 
 
 
-    if block_confirmed == True:
+    if block_confirmed:
         print('new block added to chain: ', values)
         blockchain.write_json(values)
         blockchain.chain.append(values)
@@ -557,7 +555,7 @@ def receive_block():
         print(blockchain.current_transactions)
         return jsonify(response), 200
 
-    if block_confirmed == False:
+    if not block_confirmed:
         print("block proof not valid")
         response = {
             'message': 'block has invalid proof, skipping...',
