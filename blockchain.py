@@ -11,12 +11,15 @@ from flask import Flask, jsonify, request
 from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
 import utils
+import logging
 
 
 class Blockchain:
     def __init__(self):
 
-
+        # silence flask console
+        log = logging.getLogger('werkzeug')
+        log.setLevel(logging.ERROR)
 
         # list for storing the chain
         self.chain = []
@@ -30,8 +33,6 @@ class Blockchain:
         # port to run blockchain on
         self.port = input("Please input port number for chain to run on\n")
 
-        #mining difficulty
-        self.difficulty = 6
 
 
         # what to do if the directory 'data' is not present, if not present; creates it.
@@ -102,21 +103,8 @@ class Blockchain:
 
         return block_with_hash
 
-    def difficulty_adjust(self, interval):
-        if interval < 650:
-            blockchain.difficulty += 1
-            print("difficulty increased")
-
-        if interval > 550:
-            blockchain.difficulty - 1
-            print("difficulty decreased")
 
 
-    def block_timing(self, new_block, last_block):
-        new_block_time = new_block['timestamp']
-        last_block_time = last_block['timestamp']
-        interval = new_block_time - last_block_time
-        return interval
 
 
     def write_json(self, data, filename='data/chain.json'):
@@ -135,10 +123,6 @@ class Blockchain:
             'previous_hash': previous_hash
         }
 
-        # block timing checks
-        last_block = self.last_block
-        timing = self.block_timing(block, last_block)
-        self.difficulty_adjust(timing)
 
         block_hash = self.hash(block)
 
@@ -210,18 +194,6 @@ class Blockchain:
         block_string = json.dumps(block, sort_keys=True).encode()
         return hashlib.sha256(block_string).hexdigest()
 
-    def proof_of_work(self, last_proof):
-        """
-        Simple Proof of Work Algorithm:
-         - Find a number p' such that hash(pp') contains leading 4 zeroes, where p is the previous p'
-         - p is the previous proof, and p' is the new proof
-        """
-
-        proof = 0
-        while self.valid_proof(last_proof, proof) is False:
-            proof += 1
-
-        return proof
 
     @staticmethod
     def valid_proof(last_proof, proof):
@@ -231,29 +203,10 @@ class Blockchain:
         :param proof: Current Proof
         :return: True if correct, False if not.
         """
-        difficulty = blockchain.difficulty
         guess = f'{last_proof}{proof}'.encode()
         guess_hash = hashlib.sha256(guess).hexdigest()
-        if difficulty == 1:
-            return guess_hash[:1] == "0"
-        if difficulty == 2:
-            return guess_hash[:2] == "00"
-        if difficulty == 3:
-            return guess_hash[:3] == "000"
-        if difficulty == 4:
-            return guess_hash[:4] == "0000"
-        if difficulty == 5:
-            return guess_hash[:5] == "00000"
-        if difficulty == 6:
-            return guess_hash[:6] == "000000"
-        if difficulty == 7:
-            return guess_hash[:7] == "0000000"
-        if difficulty == 8:
-            return guess_hash[:8] == "00000000"
-        if difficulty == 9:
-            return guess_hash[:9] == "000000000"
-        if difficulty >= 10:
-            return guess_hash[:10] == "0000000000"
+        return guess_hash[:3] == "000"
+
 
     def register_node(self, address):
         """
@@ -588,7 +541,7 @@ def receive_block():
 
 
 
-    if block_confirmed == True:
+    if block_confirmed:
         print('new block added to chain: ', values)
         blockchain.write_json(values)
         blockchain.chain.append(values)
@@ -602,7 +555,7 @@ def receive_block():
         print(blockchain.current_transactions)
         return jsonify(response), 200
 
-    if block_confirmed == False:
+    if not block_confirmed:
         print("block proof not valid")
         response = {
             'message': 'block has invalid proof, skipping...',
@@ -610,11 +563,6 @@ def receive_block():
         }
         return jsonify(response), 400
 
-
-@app.route('/difficulty', methods=['GET'])
-def current_difficulty():
-    difficulty = blockchain.difficulty
-    return jsonify(difficulty), 200
 
 
 @app.route('/proof', methods=['GET'])

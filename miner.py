@@ -9,18 +9,17 @@ from Crypto.PublicKey import RSA
 import random
 from Crypto.Signature import pkcs1_15
 from Crypto.Hash import SHA256
-import threading
+
 
 class Miner:
 
     def __init__(self):
-
+        self.mining_mode = input("Please enter mining mode: pool or solo:\n")
         self.node = input('Please enter the address of a node to begin mining:\n')
 
         if not os.path.isfile('data/wallet.json'):
             utils.generate_wallet()
 
-        threading.Timer.daemon = True
 
 
         wallet_file = json.load(open('data/wallet.json', 'r'))
@@ -30,7 +29,7 @@ class Miner:
         self.public_key_hash = wallet_file['public key hash']
 
 
-    def proof_of_work(self, last_proof, difficulty):
+    def proof_of_work(self, last_proof):
         """
         Simple Proof of Work Algorithm:
          - Find a number p' such that hash(pp') contains leading 4 zeroes, where p is the previous p'
@@ -39,14 +38,14 @@ class Miner:
 
         proof = 0
 
-        while self.valid_proof(last_proof, proof, difficulty) is False:
-            proof = random.randint(1, 999999999999)
+        while self.valid_proof(last_proof, proof) is False:
+            proof = random.randint(1, 9999999999)
 
 
         return proof
 
     @staticmethod
-    def valid_proof(last_proof, proof, difficulty):
+    def valid_proof(last_proof, proof):
         """
         Validates the Proof
         :param last_proof: Previous Proof
@@ -56,24 +55,8 @@ class Miner:
 
         guess = f'{last_proof}{proof}'.encode()
         guess_hash = hashlib.sha256(guess).hexdigest()
-        if difficulty == 1:
-            return guess_hash[:1] == "0"
-        if difficulty == 2:
-            return guess_hash[:2] == "00"
-        if difficulty == 3:
-            return guess_hash[:3] == "000"
-        if difficulty == 4:
-            return guess_hash[:4] == "0000"
-        if difficulty == 5:
-            return guess_hash[:5] == "00000"
-        if difficulty == 6:
-            return guess_hash[:6] == "000000"
-        if difficulty == 7:
-            return guess_hash[:7] == "0000000"
-        if difficulty == 8:
-            return guess_hash[:8] == "00000000"
-        if difficulty >= 9:
-            return guess_hash[:9] == "000000000"
+        return guess_hash[:3] == "000"
+
 
     def get_last_block(self):
 
@@ -92,12 +75,7 @@ class Miner:
         else:
             print("couldn't obtain proof")
 
-    def get_difficulty(self):
-        response = requests.get(f'http://{self.node}/difficulty')
-        if response.status_code == 200:
-            return response.json()
-        else:
-            print("couldn't obtain difficulty")
+
 
     def get_last_hash(self):
         last_block = self.get_last_block()
@@ -114,55 +92,94 @@ class Miner:
         signature_hex = binascii.hexlify(self.sign_transaction_data(data)).decode("utf-8")
         return signature_hex
 
-    def update_values(self):
-        threading.Timer(45.0, self.update_values).start()
-        self.get_last_proof()
-        self.get_difficulty()
+    @staticmethod
+    def hash(block):
+        """
+        Creates a SHA-256 hash of a Block
+        :param block: Block
+        """
+
+        # We must make sure that the Dictionary is Ordered, or we'll have inconsistent hashes
+        block_string = json.dumps(block, sort_keys=True).encode()
+        return hashlib.sha256(block_string).hexdigest()
+
+
 
 
 
     def mine(self):
-        while True:
-            self.update_values()
-            last_proof = self.get_last_proof()
-            difficulty = self.get_difficulty()
-            print("Last Proof: ", last_proof)
-            print("Difficulty: ", difficulty)
-
-            proof = self.proof_of_work(last_proof, difficulty)
 
 
-            if self.valid_proof(last_proof, proof, difficulty):
-                print('Proof Found: ', proof)
-                headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+            if self.mining_mode == "pool":
+                while True:
+                    last_proof = self.get_last_proof()
+                    proof = random.randint(1, 9999999999)
+                    proof_to_be_hashed = int(str(last_proof) + str(proof))
 
-                proof_transaction = {
-                    'proof': proof,
-                    'last_proof': last_proof,
-                    'public_key_hash': self.public_key_hash,
-                    'public_key_hex': self.public_key_hex,
-                    'previous_block_hash': self.get_last_hash()
-                }
+                    share = {
+                        'proof': proof,
+                        'last_proof': last_proof,
+                        'public_key_hash': self.public_key_hash,
+                        'proof_hash': self.hash(proof_to_be_hashed)
+                    }
 
-                proof_signature = self.sign(proof_transaction)
+                    response = requests.post(f'http://{self.node}/submit', json=share)
 
-                proof_transaction_with_sig = {
-                    'proof': proof,
-                    'last_proof': last_proof,
-                    'public_key_hash': self.public_key_hash,
-                    'public_key_hex': self.public_key_hex,
-                    'previous_block_hash': self.get_last_hash(),
-                    'signature': proof_signature
-                }
 
-                response = requests.post(f'http://{self.node}/miners', json=proof_transaction_with_sig, headers=headers)
+                    if response.status_code == 400:
+                        print("stale share submitted, getting new proof")
+                        self.get_last_proof()
 
-                if response.status_code == 200:
-                    print('New Block Forged! Proof Accepted ', proof)
-                    time.sleep(5)
 
-                if response.status_code == 400:
-                    print("stale proof submitted, getting new proof")
+
+
+
+            if self.mining_mode == 'solo':
+
+                while True:
+                    last_proof = self.get_last_proof()
+                    proof = self.proof_of_work(last_proof)
+                    print("Last Proof: ", last_proof)
+                    print("Proof: ", proof)
+                    if self.valid_proof(last_proof, proof):
+                        print('Proof Found: ', proof)
+                        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+
+                        proof_transaction = {
+                            'proof': proof,
+                            'last_proof': last_proof,
+                            'public_key_hash': self.public_key_hash,
+                            'public_key_hex': self.public_key_hex,
+                            'previous_block_hash': self.get_last_hash()
+                        }
+
+                        proof_signature = self.sign(proof_transaction)
+
+                        proof_transaction_with_sig = {
+                            'proof': proof,
+                            'last_proof': last_proof,
+                            'public_key_hash': self.public_key_hash,
+                            'public_key_hex': self.public_key_hex,
+                            'previous_block_hash': self.get_last_hash(),
+                            'signature': proof_signature
+                        }
+
+                        response = requests.post(f'http://{self.node}/miners', json=proof_transaction_with_sig, headers=headers)
+
+                        if response.status_code == 200:
+                            print('New Block Forged! Proof Accepted ', proof)
+                            time.sleep(5)
+
+                        if response.status_code == 400:
+                            print("stale proof submitted, getting new proof")
+
+
+
+
+
+
+
+
 
 
 

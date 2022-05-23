@@ -186,7 +186,7 @@ class Wallet:
             length = response.json()['length']
             chain = response.json()['chain']
 
-            return chain[length - 1]['previous_hash']
+            return chain[length - 1]['current_hash']
 
     def get_chain(self):
         for node in self.nodes:
