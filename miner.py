@@ -20,14 +20,11 @@ class Miner:
         if not os.path.isfile('data/wallet.json'):
             utils.generate_wallet()
 
-
-
         wallet_file = json.load(open('data/wallet.json', 'r'))
         self.private_key = RSA.import_key(wallet_file['private key'])
         self.public_key = RSA.import_key(wallet_file['public key'])
         self.public_key_hex = wallet_file['public key hex']
         self.public_key_hash = wallet_file['public key hash']
-
 
     def proof_of_work(self, last_proof):
         """
@@ -40,7 +37,6 @@ class Miner:
 
         while self.valid_proof(last_proof, proof) is False:
             proof = random.randint(1, 9999999999)
-
 
         return proof
 
@@ -55,8 +51,7 @@ class Miner:
 
         guess = f'{last_proof}{proof}'.encode()
         guess_hash = hashlib.sha256(guess).hexdigest()
-        return guess_hash[:6] == "000000"
-
+        return guess_hash[:5] == "00000"
 
     def get_last_block(self):
 
@@ -74,8 +69,6 @@ class Miner:
             return response.json()
         else:
             print("couldn't obtain proof")
-
-
 
     def get_last_hash(self):
         last_block = self.get_last_block()
@@ -103,90 +96,85 @@ class Miner:
         block_string = json.dumps(block, sort_keys=True).encode()
         return hashlib.sha256(block_string).hexdigest()
 
-
-
-
-
     def mine(self):
 
+        if self.mining_mode == "pool":
 
-            if self.mining_mode == "pool":
-                while True:
-                    last_proof = self.get_last_proof()
-                    proof = random.randint(1, 9999999999)
-                    proof_to_be_hashed = int(str(last_proof) + str(proof))
+            shares = []
 
-                    share = {
-                        'proof': proof,
-                        'last_proof': last_proof,
-                        'public_key_hash': self.public_key_hash,
-                        'proof_hash': self.hash(proof_to_be_hashed)
-                    }
+            while True:
 
-                    response = requests.post(f'http://{self.node}/submit', json=share)
+                last_proof = self.get_last_proof()
+                proof = random.randint(1, 9999999999)
+                proof_to_be_hashed = int(str(last_proof) + str(proof))
+
+                share = {
+                    'proof': proof,
+                    'last_proof': last_proof,
+                    'public_key_hash': self.public_key_hash,
+                    'proof_hash': self.hash(proof_to_be_hashed)
+                }
+
+                shares.append(share)
+                print(len(shares))
+                if len(shares) >= 5000:
+                    print("collected 5000 shares, now sharing with pool")
+
+                    response = requests.post(f'http://{self.node}/submit', json=shares)
 
                     if response.status_code == 200:
                         print("share accepted!")
 
-
                     if response.status_code == 400:
                         print("stale share submitted, getting new proof")
                         self.get_last_proof()
+                        break
+                    # clear the list storing our generated shares after sharing them
+                    # with the pool or receiving a stale 400 code
+                    print("Share Broadcast Complete")
+                    shares = []
 
+        if self.mining_mode == 'solo':
 
+            while True:
+                last_proof = self.get_last_proof()
+                proof = self.proof_of_work(last_proof)
+                print("Last Proof: ", last_proof)
+                print("Proof: ", proof)
+                if self.valid_proof(last_proof, proof):
+                    print('Proof Found: ', proof)
+                    headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
 
+                    proof_transaction = {
+                        'proof': proof,
+                        'last_proof': last_proof,
+                        'public_key_hash': self.public_key_hash,
+                        'public_key_hex': self.public_key_hex,
+                        'previous_block_hash': self.get_last_hash()
+                    }
 
+                    proof_signature = self.sign(proof_transaction)
 
-            if self.mining_mode == 'solo':
+                    proof_transaction_with_sig = {
+                        'proof': proof,
+                        'last_proof': last_proof,
+                        'public_key_hash': self.public_key_hash,
+                        'public_key_hex': self.public_key_hex,
+                        'previous_block_hash': self.get_last_hash(),
+                        'signature': proof_signature
+                    }
 
-                while True:
-                    last_proof = self.get_last_proof()
-                    proof = self.proof_of_work(last_proof)
-                    print("Last Proof: ", last_proof)
-                    print("Proof: ", proof)
-                    if self.valid_proof(last_proof, proof):
-                        print('Proof Found: ', proof)
-                        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+                    response = requests.post(f'http://{self.node}/miners', json=proof_transaction_with_sig,
+                                             headers=headers)
 
-                        proof_transaction = {
-                            'proof': proof,
-                            'last_proof': last_proof,
-                            'public_key_hash': self.public_key_hash,
-                            'public_key_hex': self.public_key_hex,
-                            'previous_block_hash': self.get_last_hash()
-                        }
+                    if response.status_code == 200:
+                        print('New Block Forged! Proof Accepted ', proof)
+                        time.sleep(5)
 
-                        proof_signature = self.sign(proof_transaction)
-
-                        proof_transaction_with_sig = {
-                            'proof': proof,
-                            'last_proof': last_proof,
-                            'public_key_hash': self.public_key_hash,
-                            'public_key_hex': self.public_key_hex,
-                            'previous_block_hash': self.get_last_hash(),
-                            'signature': proof_signature
-                        }
-
-                        response = requests.post(f'http://{self.node}/miners', json=proof_transaction_with_sig, headers=headers)
-
-                        if response.status_code == 200:
-                            print('New Block Forged! Proof Accepted ', proof)
-                            time.sleep(5)
-
-                        if response.status_code == 400:
-                            print("stale proof submitted, getting new proof")
-
-
-
-
-
-
-
-
-
+                    if response.status_code == 400:
+                        print("stale proof submitted, getting new proof")
 
 
 Miner = Miner()
 
 Miner.mine()
-

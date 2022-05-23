@@ -144,7 +144,7 @@ class pool:
 
         guess = f'{last_proof}{proof}'.encode()
         guess_hash = hashlib.sha256(guess).hexdigest()
-        return guess_hash[:6] == "000000"
+        return guess_hash[:5] == "00000"
 
     def hash(self, block):
         # We must make sure that the Dictionary is Ordered, or we'll have inconsistent hashes
@@ -252,53 +252,59 @@ def last_proof():
 @app.route('/submit', methods=['POST'])
 def share_submit():
     values = request.get_json()
-    last_proof = pool.get_last_proof()
-    share_last_proof = values['last_proof']
-    tried_proof = values['proof']
-    hash = values['proof_hash']
-    share_address = values['public_key_hash']
 
-    proof_to_be_hashed = int(str(last_proof) + str(tried_proof))
+    for item in values:
+        last_proof = pool.get_last_proof()
+        share_last_proof = item['last_proof']
+        tried_proof = item['proof']
+        hash = item['proof_hash']
+        share_address = item['public_key_hash']
+
+        proof_to_be_hashed = int(str(last_proof) + str(tried_proof))
 
 
-    share = {
-        'address': share_address,
-        'last_proof': last_proof,
-        'tried_proof': tried_proof,
-        'hash': hash
-    }
+        share = {
+            'address': share_address,
+            'last_proof': last_proof,
+            'tried_proof': tried_proof,
+            'hash': hash
+        }
 
-    if last_proof != share_last_proof:
-        print("stale share")
-        return "stale share", 400
+        if last_proof != share_last_proof:
+            print("stale share")
+            return "stale share", 400
 
-    if pool.hash(proof_to_be_hashed) != hash:
-        print('invalid share')
-        return "invalid share", 400
+        if pool.hash(proof_to_be_hashed) != hash:
+            print('invalid share')
+            return "invalid share", 400
 
-    if pool.valid_proof(last_proof, tried_proof):
-        print("Proof Found!")
-        pool.shares.append(share)
-        pool.send_proof(proof=tried_proof, prev_proof=share_last_proof)
+        if pool.valid_proof(last_proof, tried_proof):
+            print("Proof Found!")
+            pool.shares.append(share)
+            pool.send_proof(proof=tried_proof, prev_proof=share_last_proof)
 
-        share_dict = pool.count_shares(pool.shares)
-        pool.calculate_split(share_dict)
-        #reset the share list
-        pool.shares = []
-        print(pool.unpaid_rewards)
-        for address in pool.unpaid_rewards:
-            amount = pool.unpaid_rewards.get(address)
-            if amount > 100:
-                pool.dispense_reward(address, amount)
-                break
+            share_dict = pool.count_shares(pool.shares)
+            pool.calculate_split(share_dict)
+            #reset the share list
+            pool.shares = []
+            print(pool.unpaid_rewards)
+            for address in pool.unpaid_rewards:
+                amount = pool.unpaid_rewards.get(address)
+                if amount > 100:
+                    pool.dispense_reward(address, amount)
+                    break
 
-    if share in pool.shares:
-        print('share already in list')
-        return "stale share", 400
+        if share in pool.shares:
+            print('share already in list')
+            return "stale share", 400
 
-    else:
-        pool.shares.append(share)
-        return "share accepted", 200
+        if share not in pool.shares:
+            pool.shares.append(share)
+    return "shares accepted", 200
+
+
+
+
 
 
 if __name__ == '__main__':
