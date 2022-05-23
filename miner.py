@@ -125,6 +125,9 @@ class Miner:
 
                     response = requests.post(f'http://{self.node}/submit', json=share)
 
+                    if response.status_code == 200:
+                        print("share accepted!")
+
 
                     if response.status_code == 400:
                         print("stale share submitted, getting new proof")
