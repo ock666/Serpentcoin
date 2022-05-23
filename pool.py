@@ -144,7 +144,7 @@ class pool:
 
         guess = f'{last_proof}{proof}'.encode()
         guess_hash = hashlib.sha256(guess).hexdigest()
-        return guess_hash[:3] == "000"
+        return guess_hash[:6] == "000000"
 
     def hash(self, block):
         # We must make sure that the Dictionary is Ordered, or we'll have inconsistent hashes
@@ -216,7 +216,8 @@ class pool:
             print("total shares: ", contributed)
             share = contributed / total_shares
             print("share of reward: ", share)
-            total_reward = block_reward * share
+            pool_fee = 0.5
+            total_reward = (block_reward * share) - pool_fee
             print("total reward: ", total_reward)
             if address in self.unpaid_rewards:
                 self.unpaid_rewards[address] += total_reward
