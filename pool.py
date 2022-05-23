@@ -282,6 +282,8 @@ def share_submit():
 
         share_dict = pool.count_shares(pool.shares)
         pool.calculate_split(share_dict)
+        #reset the share list
+        pool.shares = []
         print(pool.unpaid_rewards)
         for address in pool.unpaid_rewards:
             amount = pool.unpaid_rewards.get(address)
