@@ -10,6 +10,7 @@ from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
 import utils
 import logging
+from threading import Thread
 
 
 class pool:
@@ -122,7 +123,6 @@ class pool:
 
         headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
 
-
         response = requests.post(f'http://{self.node_address}/transactions/new', json=transaction, headers=headers)
         if response.status_code == 201:
             return True
@@ -228,10 +228,51 @@ class pool:
         if confirmed:
             self.unpaid_rewards[address] = 0
 
+    def evaluate_shares(self, values):
+        for item in values:
+            last_proof = pool.get_last_proof()
+            share_last_proof = item['last_proof']
+            tried_proof = item['proof']
+            hash = item['proof_hash']
+            share_address = item['public_key_hash']
+
+            proof_to_be_hashed = int(str(last_proof) + str(tried_proof))
+
+            share = {
+                'address': share_address,
+                'last_proof': last_proof,
+                'tried_proof': tried_proof,
+                'hash': hash
+            }
+
+            if last_proof != share_last_proof:
+                print("stale share")
+                break
+
+            if pool.hash(proof_to_be_hashed) != hash:
+                print('invalid share')
+                break
+
+            if pool.valid_proof(last_proof, tried_proof):
+                print("Proof Found!")
+                pool.shares.append(share)
+                pool.send_proof(proof=tried_proof, prev_proof=share_last_proof)
+
+                share_dict = pool.count_shares(pool.shares)
+                pool.calculate_split(share_dict)
+                # reset the share list
+                pool.shares = []
+                print(pool.unpaid_rewards)
+                for address in pool.unpaid_rewards:
+                    amount = pool.unpaid_rewards.get(address)
+                    if amount > 100:
+                        pool.dispense_reward(address, amount)
+                        break
 
 
-
-
+            if share not in pool.shares:
+                pool.shares.append(share)
+        print("Finished processing share block")
 
 
 
@@ -250,60 +291,21 @@ def last_proof():
 @app.route('/submit', methods=['POST'])
 def share_submit():
     values = request.get_json()
+    shares = []
+    shares.append(values)
     print("share block received!")
-    for item in values:
-        last_proof = pool.get_last_proof()
-        share_last_proof = item['last_proof']
-        tried_proof = item['proof']
-        hash = item['proof_hash']
-        share_address = item['public_key_hash']
 
-        proof_to_be_hashed = int(str(last_proof) + str(tried_proof))
+    threads = [Thread(target=pool.evaluate_shares, args=shares)]
+
+    for thread in threads:
+        thread.start()
+
+    for thread in threads:
+        thread.join()
 
 
-        share = {
-            'address': share_address,
-            'last_proof': last_proof,
-            'tried_proof': tried_proof,
-            'hash': hash
-        }
 
-        if last_proof != share_last_proof:
-            print("stale share")
-            return "stale share", 400
-
-        if pool.hash(proof_to_be_hashed) != hash:
-            print('invalid share')
-            return "invalid share", 400
-
-        if pool.valid_proof(last_proof, tried_proof):
-            print("Proof Found!")
-            pool.shares.append(share)
-            pool.send_proof(proof=tried_proof, prev_proof=share_last_proof)
-
-            share_dict = pool.count_shares(pool.shares)
-            pool.calculate_split(share_dict)
-            #reset the share list
-            pool.shares = []
-            print(pool.unpaid_rewards)
-            for address in pool.unpaid_rewards:
-                amount = pool.unpaid_rewards.get(address)
-                if amount > 100:
-                    pool.dispense_reward(address, amount)
-                    break
-
-        if share in pool.shares:
-            print('share already in list')
-            return "stale share", 400
-
-        if share not in pool.shares:
-            pool.shares.append(share)
-    print("Finished processing share block")
     return "shares accepted", 200
-
-
-
-
 
 
 if __name__ == '__main__':
