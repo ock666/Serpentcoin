@@ -120,7 +120,7 @@ class Miner:
                     if len(shares) >= 5000:
                         print("collected 5000 shares, now sharing with pool")
                         try:
-                            requests.post(f'http://{self.node}/submit', json=shares, timeout=0.5)
+                            requests.post(f'http://{self.node}/submit', json=shares)
                         except:
                             pass
 
