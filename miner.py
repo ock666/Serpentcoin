@@ -128,7 +128,7 @@ class Miner:
                     if response.status_code == 400:
                         print("stale share submitted, getting new proof")
                         self.get_last_proof()
-                        break
+
                     # clear the list storing our generated shares after sharing them
                     # with the pool or receiving a stale 400 code
                     print("Share Broadcast Complete")

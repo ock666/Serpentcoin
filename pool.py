@@ -2,8 +2,6 @@ import binascii
 import hashlib
 import json
 from time import time
-from urllib.parse import urlparse
-import Validation
 import os
 import requests
 from Crypto.Signature import pkcs1_15
@@ -252,7 +250,7 @@ def last_proof():
 @app.route('/submit', methods=['POST'])
 def share_submit():
     values = request.get_json()
-
+    print("share block received!")
     for item in values:
         last_proof = pool.get_last_proof()
         share_last_proof = item['last_proof']
@@ -300,6 +298,7 @@ def share_submit():
 
         if share not in pool.shares:
             pool.shares.append(share)
+    print("Finished processing share block")
     return "shares accepted", 200
 
 
