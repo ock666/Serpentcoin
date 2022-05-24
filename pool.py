@@ -197,9 +197,11 @@ class pool:
         last_proof = self.get_last_proof()
         count = 0
         for share in shares:
-
+            proof = share['proof']
+            proof_to_be_hashed = int(str(last_proof) + str(proof))
             address = share['public_key_hash']
-            if share['last_proof'] == last_proof:
+
+            if share['proof_hash'] == self.hash(proof_to_be_hashed):
                 if address not in self.share_dict:
                     self.share_dict[address] = 1
                     count += 1
@@ -220,7 +222,7 @@ class pool:
             print(address, "total shares: ", contributed)
             split = contributed / total_shares
             print("share of reward", split)
-            total_reward = (block_reward * split)
+            total_reward = (block_reward * split) - pool_fee
             print("total reward: ", total_reward)
             if address in self.unpaid_rewards:
                 self.unpaid_rewards[address] += total_reward

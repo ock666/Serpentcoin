@@ -106,7 +106,7 @@ class Miner:
 
                 last_proof = self.get_last_proof()
 
-                for i in range(20001):
+                for i in range(200001):
 
                     print(len(shares))
                     proof = random.randint(1, 9999999999)
@@ -121,8 +121,8 @@ class Miner:
                     if not self.valid_proof(last_proof, proof):
                         shares.append(share)
 
-                    if len(shares) >= 20000:
-                        print("collected 20000 shares, now sharing with pool")
+                    if len(shares) >= 200000:
+                        print("collected 200000 shares, now sharing with pool")
 
 
                         requests.post(f'http://{self.node}/submit', json=shares)
