@@ -11,6 +11,7 @@ from Crypto.PublicKey import RSA
 import utils
 import logging
 from threading import Thread
+import Validation
 
 
 class pool:
@@ -22,7 +23,7 @@ class pool:
         # init variables
         self.chain = []
         self.miners = []
-        self.shares = []
+        self.share_dict = {}
         self.unpaid_rewards = {}
         self.transactions = []
         self.node_address = input("Please enter the address of a node\n")
@@ -193,34 +194,36 @@ class pool:
     # Share calculations
 
     def count_shares(self, shares):
-        addresses = {}
-
+        last_proof = self.get_last_proof()
         for share in shares:
-            address = share['address']
-            if address not in addresses:
-                addresses[address] = 1
-            if address in addresses:
-                addresses[address] += 1
+            address = share[0]['public_key_hash']
+            if share[0]['last_proof'] == last_proof:
+                if address not in self.share_dict:
+                    self.share_dict[address] = 1
+                if address in self.share_dict:
+                    self.share_dict[address] += 1
 
-        return addresses
 
-    def calculate_split(self, shares):
-        total_shares = len(self.shares)
+    def calculate_split(self):
+        total_shares = sum(self.share_dict.values())
+        addresses = list(self.share_dict.keys())
         print(total_shares)
-        for address in shares:
+
+        for address in addresses:
             block_reward = 10
-            contributed = shares.get(address)
-            print(address)
-            print("total shares: ", contributed)
-            share = contributed / total_shares
-            print("share of reward: ", share)
             pool_fee = 0.5
-            total_reward = (block_reward * share) - pool_fee
+            contributed = self.share_dict.get(address)
+            print(address, "total shares: ", contributed)
+            split = contributed / total_shares
+            print("share of reward", split)
+            total_reward = (block_reward * split) - pool_fee
             print("total reward: ", total_reward)
             if address in self.unpaid_rewards:
                 self.unpaid_rewards[address] += total_reward
             else:
                 self.unpaid_rewards[address] = total_reward
+        self.share_dict = {}
+
 
     def dispense_reward(self, address, amount):
         unix_time = time()
@@ -228,51 +231,6 @@ class pool:
         if confirmed:
             self.unpaid_rewards[address] = 0
 
-    def evaluate_shares(self, values):
-        for item in values:
-            last_proof = pool.get_last_proof()
-            share_last_proof = item['last_proof']
-            tried_proof = item['proof']
-            hash = item['proof_hash']
-            share_address = item['public_key_hash']
-
-            proof_to_be_hashed = int(str(last_proof) + str(tried_proof))
-
-            share = {
-                'address': share_address,
-                'last_proof': last_proof,
-                'tried_proof': tried_proof,
-                'hash': hash
-            }
-
-            if last_proof != share_last_proof:
-                print("stale share")
-                break
-
-            if pool.hash(proof_to_be_hashed) != hash:
-                print('invalid share')
-                break
-
-            if pool.valid_proof(last_proof, tried_proof):
-                print("Proof Found!")
-                pool.shares.append(share)
-                pool.send_proof(proof=tried_proof, prev_proof=share_last_proof)
-
-                share_dict = pool.count_shares(pool.shares)
-                pool.calculate_split(share_dict)
-                # reset the share list
-                pool.shares = []
-                print(pool.unpaid_rewards)
-                for address in pool.unpaid_rewards:
-                    amount = pool.unpaid_rewards.get(address)
-                    if amount > 100:
-                        pool.dispense_reward(address, amount)
-                        break
-
-
-            if share not in pool.shares:
-                pool.shares.append(share)
-        print("Finished processing share block")
 
 
 
@@ -280,6 +238,17 @@ class pool:
 app = Flask(__name__)
 
 pool = pool()
+
+@app.route('/chain', methods=['GET'])
+def forward_chain_request():
+    response = requests.get(f'http://{pool.node_address}/chain')
+    forward = {
+        'chain': response.json()['chain'],
+        'length': response.json()['length']
+    }
+    return jsonify(forward), 200
+
+
 
 
 @app.route('/proof', methods=['GET'])
@@ -289,23 +258,55 @@ def last_proof():
 
 
 @app.route('/submit', methods=['POST'])
-def share_submit():
+def hash_rate_submit():
     values = request.get_json()
-    shares = []
-    shares.append(values)
+    shares = [values]
     print("share block received!")
-
-    threads = [Thread(target=pool.evaluate_shares, args=shares)]
-
-    for thread in threads:
-        thread.start()
-
-    for thread in threads:
-        thread.join()
-
-
-
+    pool.count_shares(shares)
     return "shares accepted", 200
+
+@app.route('/submit/proof', methods=['POST'])
+def receive_proof():
+    #table for storing received json
+    values = request.get_json()
+
+    #variables for storing the proof data
+    proof = values['proof']
+    last_proof = pool.get_last_proof()
+
+    # check to see if the proof is valid
+    proof_valid = pool.valid_proof(last_proof, proof)
+
+    if not proof_valid:
+        return "invalid proof", 400
+
+    if proof_valid:
+        print("Proof Found!")
+        # if proof is valid we will continue to assign variables
+        confirming_address = values['public_key_hash']
+        public_key_hex = values['public_key_hex']
+        previous_hash = values['previous_block_hash']
+        signature = values['signature']
+
+        trans_data = {
+            'proof': proof,
+            'last_proof': last_proof,
+            'public_key_hash': confirming_address,
+            'public_key_hex': public_key_hex,
+            'previous_block_hash': previous_hash
+        }
+        if Validation.validate_signature(public_key_hex, signature, trans_data):
+            print("signature valid")
+            pool.send_proof(proof=proof, prev_proof=last_proof)
+            pool.calculate_split()
+            for address in pool.unpaid_rewards:
+                amount = pool.unpaid_rewards.get(address)
+                if amount >= 100:
+                    pool.dispense_reward(address=address, amount=amount)
+                    return "ok", 200
+            return "ok", 200
+
+
 
 
 if __name__ == '__main__':
