@@ -143,7 +143,7 @@ class pool:
 
         guess = f'{last_proof}{proof}'.encode()
         guess_hash = hashlib.sha256(guess).hexdigest()
-        return guess_hash[:7] == "0000000"
+        return guess_hash[:6] == "000000"
 
     def hash(self, block):
         # We must make sure that the Dictionary is Ordered, or we'll have inconsistent hashes

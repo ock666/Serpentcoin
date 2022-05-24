@@ -51,7 +51,7 @@ class Miner:
 
         guess = f'{last_proof}{proof}'.encode()
         guess_hash = hashlib.sha256(guess).hexdigest()
-        return guess_hash[:7] == "0000000"
+        return guess_hash[:6] == "000000"
 
     def get_last_block(self):
 
