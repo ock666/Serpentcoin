@@ -119,15 +119,10 @@ class Miner:
                 print(len(shares))
                 if len(shares) >= 5000:
                     print("collected 5000 shares, now sharing with pool")
-
-                    response = requests.post(f'http://{self.node}/submit', json=shares)
-
-                    if response.status_code == 200:
-                        print("share accepted!")
-
-                    if response.status_code == 400:
-                        print("stale share submitted, getting new proof")
-                        self.get_last_proof()
+                    try:
+                        requests.post(f'http://{self.node}/submit', json=shares, timeout=0.0000000001)
+                    except:
+                        pass
 
                     # clear the list storing our generated shares after sharing them
                     # with the pool or receiving a stale 400 code
