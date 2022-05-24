@@ -124,7 +124,9 @@ class Miner:
                     if len(shares) >= 20000:
                         print("collected 20000 shares, now sharing with pool")
 
+
                         requests.post(f'http://{self.node}/submit', json=shares)
+
 
 
                         # clear the list storing our generated shares after sharing them

@@ -195,13 +195,17 @@ class pool:
 
     def count_shares(self, shares):
         last_proof = self.get_last_proof()
+        count = 0
         for share in shares:
-            address = share[0]['public_key_hash']
-            if share[0]['last_proof'] == last_proof:
+
+            address = share['public_key_hash']
+            if share['last_proof'] == last_proof:
                 if address not in self.share_dict:
                     self.share_dict[address] = 1
+                    count += 1
                 if address in self.share_dict:
                     self.share_dict[address] += 1
+                    count += 1
 
 
     def calculate_split(self):
@@ -216,7 +220,7 @@ class pool:
             print(address, "total shares: ", contributed)
             split = contributed / total_shares
             print("share of reward", split)
-            total_reward = (block_reward * split) - pool_fee
+            total_reward = (block_reward * split)
             print("total reward: ", total_reward)
             if address in self.unpaid_rewards:
                 self.unpaid_rewards[address] += total_reward
@@ -260,9 +264,7 @@ def last_proof():
 @app.route('/submit', methods=['POST'])
 def hash_rate_submit():
     values = request.get_json()
-    shares = [values]
-    print("share block received!")
-    pool.count_shares(shares)
+    pool.count_shares(values)
     return "shares accepted", 200
 
 @app.route('/submit/proof', methods=['POST'])
