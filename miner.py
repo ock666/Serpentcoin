@@ -105,29 +105,29 @@ class Miner:
             while True:
 
                 last_proof = self.get_last_proof()
-                proof = random.randint(1, 9999999999)
-                proof_to_be_hashed = int(str(last_proof) + str(proof))
+                for i in range(5000):
+                    proof = random.randint(1, 9999999999)
+                    proof_to_be_hashed = int(str(last_proof) + str(proof))
 
-                share = {
-                    'proof': proof,
-                    'last_proof': last_proof,
-                    'public_key_hash': self.public_key_hash,
-                    'proof_hash': self.hash(proof_to_be_hashed)
-                }
+                    share = {
+                        'proof': proof,
+                        'last_proof': last_proof,
+                        'public_key_hash': self.public_key_hash,
+                        'proof_hash': self.hash(proof_to_be_hashed)
+                    }
 
-                shares.append(share)
-                print(len(shares))
-                if len(shares) >= 5000:
-                    print("collected 5000 shares, now sharing with pool")
-                    try:
-                        requests.post(f'http://{self.node}/submit', json=shares, timeout=0.0000000001)
-                    except:
-                        pass
+                    shares.append(share)
+                    if len(shares) >= 5000:
+                        print("collected 5000 shares, now sharing with pool")
+                        try:
+                            requests.post(f'http://{self.node}/submit', json=shares, timeout=0.5)
+                        except:
+                            pass
 
-                    # clear the list storing our generated shares after sharing them
-                    # with the pool or receiving a stale 400 code
-                    print("Share Broadcast Complete")
-                    shares = []
+                        # clear the list storing our generated shares after sharing them
+                        # with the pool or receiving a stale 400 code
+                        print("Share Broadcast Complete")
+                        shares = []
 
         if self.mining_mode == 'solo':
 
