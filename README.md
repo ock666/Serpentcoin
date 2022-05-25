@@ -4,7 +4,7 @@ A blockchain written in python which outputs and reads chain data from a json fi
 
 > https://hackernoon.com/learn-blockchains-by-building-one-117428612f46
 
-The original code was not persistant between restarts of the program; and any values stored in the chain table would be lost.
+The original code was not persistent between restarts of the program; and any values stored in the chain table would be lost.
 I thought that wasn't very cash money and learning to work with JSON objects sounded like fun.
 
 # How to use
