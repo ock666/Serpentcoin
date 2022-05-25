@@ -85,8 +85,6 @@ I hope to make this project the best it can be, and I hope others find it intere
 
 ### Built With
 
-This section should list any major frameworks/libraries used to bootstrap your project. Leave any add-ons/plugins for the acknowledgements section. Here are a few examples.
-
 * [Flask](https://flask.palletsprojects.com/)
 * [Pycryptodome](https://pypi.org/project/pycryptodome/)
 * [Requests](https://pypi.org/project/requests/)
