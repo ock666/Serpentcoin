@@ -51,8 +51,8 @@
       </ul>
     </li>
     <li><a href="#usage">Usage</a></li>
-    <li><a href="#features">Features</a></li>
-    <li><a href="#API">API Calls</a></li>
+    <li><a href="#API">API</a></li>
+    <li><a href="#features">Features</a></li> 
     <li><a href="#roadmap">Roadmap</a></li>
     <li><a href="#contributing">Contributing</a></li>
     <li><a href="#license">License</a></li>
