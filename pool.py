@@ -229,12 +229,14 @@ class pool:
             else:
                 self.unpaid_rewards[address] = total_reward
         self.share_dict = {}
+        print(self.unpaid_rewards)
 
 
     def dispense_reward(self, address, amount):
         unix_time = time()
         confirmed = self.new_transaction(recipient=address, amount=amount, unix_time=unix_time)
         if confirmed:
+            print(amount, " paid out to ", address, " at ", unix_time)
             self.unpaid_rewards[address] = 0
 
 
