@@ -306,8 +306,6 @@ Project Link: [https://github.com/ock666/python-blockchain](https://github.com/o
 <!-- ACKNOWLEDGMENTS -->
 ## Acknowledgments
 
-Use this space to list resources you find helpful and would like to give credit to. I've included a few of my favorites to kick things off!
-
 * [Satoshi Nakamoto](https://bitcoin.org/bitcoin.pdf)
 * [Daniel van Flymen](https://hackernoon.com/learn-blockchains-by-building-one-117428612f46)
 * [river.com](https://river.com/learn/how-bitcoin-mining-pools-work/)
