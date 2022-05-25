@@ -307,7 +307,7 @@ def receive_proof():
             pool.calculate_split()
             for address in pool.unpaid_rewards:
                 amount = pool.unpaid_rewards.get(address)
-                if amount >= 100:
+                if amount >= 20:
                     pool.dispense_reward(address=address, amount=amount)
                     return "ok", 200
             return "ok", 200
