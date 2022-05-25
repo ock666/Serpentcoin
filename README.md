@@ -76,6 +76,7 @@ The code was adapted from the following tutorial and expanded upon.
 Here's why:
 * To expand my coding abilities and tackle new novel problems
 * For fun and to learn how blockchains work by creating my own
+* Something to do in my offtime
 
 I hope to make this project the best it can be, and I hope others find it interesting or may wish to contribute. I'm not a professional developer or expert so the code may not be 100% efficient, But I do welcome contributions to the project.
 
