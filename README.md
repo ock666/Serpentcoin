@@ -1,6 +1,7 @@
 # Python-Blockchain
 
-A simple blockchain which outputs and reads chain data from a json file. The code was adapted from the following tutorial
+A blockchain written in python which outputs and reads chain data from a json file. The code was adapted from the following tutorial and expanded upon.
+
 > https://hackernoon.com/learn-blockchains-by-building-one-117428612f46
 
 The original code was not persistant between restarts of the program; and any values stored in the chain table would be lost.
@@ -27,12 +28,12 @@ Nodes will also resolve when registering a new node.
 The blockchain can also be interacted with using the miner.py, pool.py, and wallet.py. Each serve their own function
 
 ### blockchain.py
-This is the main blockchain node that everything will connect to, including other blockchain.py nodes.
+This is the main blockchain node that everything will connect to, including other blockchain.py nodes, as well as pool.py, and wallet.py. The blockchain will verify funds, hashes, and signatures and forge blocks with new transactions waiting to be confirmed in the mem-pool when a miner or pool finds the correct proof for the next block.
 ### miner.py
-This is the miner for the blockchain that will forge new blocks by solving proofs that output to a defined hash structure which will solve for the next block. The miner has two modes, solo and pool. In solo mode the miner must be connected to blockchain.py directly, in pool mode it must connect to pool.py.
-Note: currently pool mode is must slower at solving blocks than solo mode, this is a known issue.
+This is the miner for the blockchain that will attempt to forge new blocks by solving proofs that output to a defined hash structure; which will solve for the next block. The miner has two modes, solo and pool. In solo mode the miner must be connected to blockchain.py directly, in pool mode it must connect to pool.py.
+Note: currently pool mode is must slower at solving blocks than solo mode, this is a known issue/limitation of the code currently.
 ### pool.py
-This is the pool node which miners configured to pool mode will connect to. pool.py records all submitted tested proofs from miners and after a block is solved, will calculate each miners share of the coinbase reward from the amount of valid shares they submitted in that given block time. Once a miner reachs 100 coins they will be eligible for a payout. Once per block the pool will submit 1 payout transaction to a miner with over 100 coins in unpaid reward balance, this transaction should confirm in the next block.
+This is the pool node which miners configured to pool mode will connect to. pool.py verifies all submitted tested proofs from miners and tallys the total number submitted by each miner. After a block is solved, will calculate each miners share of the coinbase reward from the amount of valid shares they submitted in that given block time. Once a miner reachs 100 coins they will be eligible for a payout. Once per block the pool will submit 1 payout transaction to a miner with over 100 coins in unpaid reward balance, this transaction should confirm in the next block.
 ### wallet.py
 This is the GUI wallet for ease of sending transactions to the blockchain. Simply input the address of the recipient, the amount to send, and hit OK. If you have enough funds, and dont have an existing transaction in the mem-pool; your transaction will be broadcasted to the network and confirmed in the next block.
 ### chain.json / wallet.json
