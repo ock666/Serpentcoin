@@ -241,6 +241,7 @@ view your transaction history within the wallet
 - [x] Develop Wallet
 - [x] Add pool mining
 - [ ] Improve pool mining efficiency
+- [ ] Implement mining difficulty scaling to ensure consistent block times
 - [ ] Node persistence
     - [ ] implement code to allow for nodes to remember each other after they have been shut down
     - [ ] implement a validation algorithm through signatures to ensure a node is who they say they are
