@@ -1,29 +1,206 @@
-# Python-Blockchain
+<div id="top"></div>
+<!--
+*** Thanks for checking out the Best-README-Template. If you have a suggestion
+*** that would make this better, please fork the repo and create a pull request
+*** or simply open an issue with the tag "enhancement".
+*** Don't forget to give the project a star!
+*** Thanks again! Now go create something AMAZING! :D
+-->
 
-A blockchain written in python which outputs and reads chain data from a json file. The code was adapted from the following tutorial and expanded upon.
 
+
+<!-- PROJECT SHIELDS -->
+<!--
+*** I'm using markdown "reference style" links for readability.
+*** Reference links are enclosed in brackets [ ] instead of parentheses ( ).
+*** See the bottom of this document for the declaration of the reference variables
+*** for contributors-url, forks-url, etc. This is an optional, concise syntax you may use.
+*** https://www.markdownguide.org/basic-syntax/#reference-style-links
+-->
+![Contributors][contributors-shield]
+[![Forks][forks-shield]][forks-url]
+[![Stargazers][stars-shield]][stars-url]
+[![Issues][issues-shield]][issues-url]
+[![MIT License][license-shield]][license-url]
+[![LinkedIn][linkedin-shield]][linkedin-url]
+
+
+
+<!-- PROJECT LOGO -->
+<br />
+<div align="center">
+  <a href="https://github.com/ock666/python-blockchain">
+    <img src="images/logo.png" alt="Logo" width="80" height="80">
+  </a>
+
+  <h3 align="center">Python Blockchain</h3>
+
+  <p align="center">
+    A blockchain coded in python
+    <br />
+    <a href="https://github.com/ock666/python-blockchain"><strong>Explore the docs »</strong></a>
+    <br />
+    <br />
+    ·
+    <a href="https://github.com/ock666/python-blockchain/issues">Report Bug</a>
+    ·
+    <a href="https://github.com/ock666/python-blockchain/issues">Request Feature</a>
+  </p>
+</div>
+
+
+
+<!-- TABLE OF CONTENTS -->
+<details>
+  <summary>Table of Contents</summary>
+  <ol>
+    <li>
+      <a href="#about-the-project">About The Project</a>
+      <ul>
+        <li><a href="#built-with">Built With</a></li>
+      </ul>
+    </li>
+    <li>
+      <a href="#getting-started">Getting Started</a>
+      <ul>
+        <li><a href="#prerequisites">Prerequisites</a></li>
+        <li><a href="#installation">Installation</a></li>
+      </ul>
+    </li>
+    <li><a href="#usage">Usage</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#API">API Calls</a></li>
+    <li><a href="#roadmap">Roadmap</a></li>
+    <li><a href="#contributing">Contributing</a></li>
+    <li><a href="#license">License</a></li>
+    <li><a href="#contact">Contact</a></li>
+    <li><a href="#acknowledgments">Acknowledgments</a></li>
+  </ol>
+</details>
+
+
+
+<!-- ABOUT THE PROJECT -->
+## About The Project
+
+
+A blockchain written in python which outputs and reads chain data from a json file. 
+
+The code was adapted from the following tutorial and expanded upon.
 > https://hackernoon.com/learn-blockchains-by-building-one-117428612f46
 
-The original code was not persistent between restarts of the program; and any values stored in the chain table would be lost.
-I thought that wasn't very cash money and learning to work with JSON objects sounded like fun.
 
-# How to use
+Here's why:
+* To expand my coding abilities and tackle new novel problems
+* For fun and to learn how blockchains work by creating my own
+
+I hope to make this project the best it can be, and I hope others find it interesting or may wish to contribute. I'm not a professional developer or expert so the code may not be 100% efficient, But I do welcome contributions to the project.
+
+<p align="right">(<a href="#top">back to top</a>)</p>
+
+
+
+### Built With
+
+This section should list any major frameworks/libraries used to bootstrap your project. Leave any add-ons/plugins for the acknowledgements section. Here are a few examples.
+
+* [Flask](https://flask.palletsprojects.com/)
+* [Pycryptodome](https://pypi.org/project/pycryptodome/)
+* [Requests](https://pypi.org/project/requests/)
+* [PySimpleGUI](https://pypi.org/project/PySimpleGUI/)
+
+
+<p align="right">(<a href="#top">back to top</a>)</p>
+
+
+
+<!-- GETTING STARTED -->
+## Getting Started
+
+Be sure to read this readme in full before trying to get set up or submitting any issues to the repo.
+
+### Prerequisites
+
+Install the requirements with
+* pip
+  ```sh
+  pip install -r requirements.txt
+  ```
+
+### Installation
+
+_Below is an example of how you can instruct your audience on installing and setting up your app. This template doesn't rely on any external dependencies or services._
+
+1. Clone the repo
+   ```sh
+   git clone https://github.com/ock666/python-blockchain.git
+   ```
+2. Install the requirements
+   ```sh
+   pip install -r requirements.txt
+   ```
+3. Run blockchain.py to generate chain.json and wallet.json.
+   ```sh
+   python3 blockchain.py
+   ```
+
+<p align="right">(<a href="#top">back to top</a>)</p>
+
+
+
+<!-- USAGE EXAMPLES -->
+## Usage
+
+* Start blockchain.py node, (and provide it a port number to run on) to generate wallet.json, and chain.json.
 ```
-1. Start blockchain.py node, (and provide it a port number to run on) to generate wallet.json, and chain.json.
-2. If a node already exists call the /nodes/register API on the new node the receive the chain (explained further below in the readme).
-3. Call the /nodes/register API on the existing node to tell it about the new blockchain.py node so that any blocks confirmed by each node can be shared.
-4. Start pool.py and connect it to the IP and port number of a blockchain.py node, pool.py will always run on port 6000.
-5. To begin mining, start miner.py and select the mode.
-6. If you are solo mining you should connect miner.py directly to the blockchain node to receive proofs, for example 192.168.0.25:5000.
-7. if you are pool mining you should connect miner.py to the pool.py node, and specify port 6000, for example 192.168.0.20:6000.
-8. Miners will now be attempting to solve proofs either through a pool or solo.
-9. Congrats! the blockchain network is now set up!
-10. Upon miners receiving rewards, wallet.py can be used to send coins to other addresses on the network.
-11. any transactions sent from the wallet.py or pool.py will confirm in the next block.
+python3 blockchain.py
 ```
+* If a node already exists call the /nodes/register API on the new node the receive the chain (explained further below in the readme).
+* Call the /nodes/register API on the existing node to tell it about the new blockchain.py node so that any blocks confirmed by each node can be shared.
+* Start pool.py and connect it to the IP and port number of a blockchain.py node, pool.py will always run on port 6000.
+```
+python3 pool.py
+```
+* To begin mining, start miner.py and select the mode.
+```
+python3 miner.py
+```
+* If you are solo mining you should connect miner.py directly to the blockchain node to receive proofs for example 192.168.0.25:5000.
+* if you are pool mining you should connect miner.py to the pool.py node, and specify port 6000 for example 192.168.0.20:6000.
+* Miners will now be attempting to solve proofs either through a pool or solo.
+* Congrats! the blockchain network is now set up!
+* Upon miners receiving rewards, wallet.py can be used to send coins to other addresses on the network.
+* any transactions sent from the wallet.py or pool.py will confirm in the next block.
+
+<p align="right">(<a href="#top">back to top</a>)</p>
+
+<!-- API -->
+
+## API Calls
 
 
-# Features
+The blockchain can be interacted with using either Postman or simple cURL commands to send POST/GET requests to the API to either:
+
+````
+1. Request the blockchain history /chain 		\\ GET
+````
+![postman chain request](pictures/postman-chain-get.png)
+``````
+2. Register a new node /nodes/register 			// POST
+``````
+![syntax for node registration](pictures/postman-node-register.png)
+``````````
+3. Resolve/update node chain data /nodes/resolve 			\\ GET
+``````````
+![postman resolve node chain](pictures/postman-resolve-node.png)
+
+Nodes will also resolve their chain when registering a new node.
+
+<p align="right">(<a href="#top">back to top</a>)</p>
+
+<!-- FEATURES -->
+
+## Features
 
 ## blockchain.py
 This is the main blockchain node that everything will connect to, including other blockchain.py nodes, as well as pool.py, and wallet.py. The blockchain will verify funds, hashes, and signatures and forge blocks with new transactions waiting to be confirmed in the mem-pool when a miner or pool finds the correct proof for the next block.
@@ -69,60 +246,107 @@ a simple GUI to send transactions to the blockchain node without having to inter
 view your transaction history within the wallet
 ![wallet-transaction-history](pictures/wallet-transaction-history.png)
 
-##API Calls
 
+<p align="right">(<a href="#top">back to top</a>)</p>
 
-The blockchain can be interacted with using either Postman or simple cURL commands to send POST/GET requests to the API to either:
+<!-- ROADMAP -->
+## Roadmap
 
-````
-1. Request the blockchain history /chain 		\\ GET
-````
-![postman chain request](pictures/postman-chain-get.png)
-``````
-2. Register a new node /nodes/register 			// POST
-``````
-![syntax for node registration](pictures/postman-node-register.png)
-``````````
-3. Resolve/update node chain data /nodes/resolve 			\\ GET
-``````````
-![postman resolve node chain](pictures/postman-resolve-node.png)
-
-Nodes will also resolve their chain when registering a new node.
-
-
-
-##Requirements
-
-install the requirements with
-
-````
-pip3 install -r requirements.txt
-````
+- [x] Add chain persistence through json
+- [x] Add block and transaction broadcasting
+- [x] Add signature and hash validation
+- [x] Add Balance Verification
+- [x] Develop Wallet
+- [x] Add pool mining
+- [ ] Improve pool mining efficiency
+- [ ] Node persistence
+    - [ ] implement code to allow for nodes to remember each other after they have been shut down
+    - [ ] implement a validation algorithm through signatures to ensure a node is who they say they are
+- [ ] Improve overall code robustness
+    - [ ] Fix up some of the response codes and json messages
+    - [ ] code clean up, bug fixes, and optimisation
+    - [ ] unit test more of the code
+- [ ] Implement blockchain explorer
+    - [ ] develop method to call chain API from a node and enter the values into a database
+    - [ ] develop backend to process chain data from database and analyse it
+    - [ ] develop frontend for a user to check address and transactions within blocks
+- [ ] develop basic mobile wallet app
+    - [ ] create method to generate QR codes from addresses
+    - [ ] allow the app to scan an address from qr code and plug that address into a new transaction window
 
 
 
-##To Do/Future feature wishlist
+See the [open issues](https://github.com/othneildrew/Best-README-Template/issues) for a full list of proposed features (and known issues).
 
-```
-Node Persistence, nodes do not remember each other if shutdown.
-
-implement signature validation within amount validation for extra security
-
-continue work on the wallet.py, The GUI is much better than CLI, but it could use some touches || WIP
-
-Fix up some of the response codes and json messages between the wallet.py and blockchain.py
-
-Blockchain explorer to view the chain in more detail/more easily.
-
-Improve the performance of pool mining within miner.py, currently the mining loop for pool mining is quite inefficient. || WIP
-
-an actual personal use case? apart from learning?  || WIP
-
-code clean up, bug fixes, and optimisation || WIP
-
-increase code robustness so entering an incorrect value doesnt crash the program etc. || WIP
-
-Unit test more of the code
-```
+<p align="right">(<a href="#top">back to top</a>)</p>
 
 
+
+<!-- CONTRIBUTING -->
+## Contributing
+
+Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+
+If you have a suggestion that would make this project better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
+Don't forget to give the project a star! Thanks again!
+
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+<p align="right">(<a href="#top">back to top</a>)</p>
+
+
+
+<!-- LICENSE -->
+## License
+
+Distributed under the MIT License. See `LICENSE.txt` for more information.
+
+<p align="right">(<a href="#top">back to top</a>)</p>
+
+
+
+<!-- CONTACT -->
+## Contact
+
+Your Name - [Oskar Petersen](https://www.linkedin.com/in/oskar-petersen-39a849185/) - oskargjerlevpetersen@gmail.com
+
+Project Link: [https://github.com/ock666/python-blockchain](https://github.com/ock666/python-blockchain)
+
+<p align="right">(<a href="#top">back to top</a>)</p>
+
+
+
+<!-- ACKNOWLEDGMENTS -->
+## Acknowledgments
+
+Use this space to list resources you find helpful and would like to give credit to. I've included a few of my favorites to kick things off!
+
+* [Satoshi Nakamoto](https://bitcoin.org/bitcoin.pdf)
+* [Daniel van Flymen](https://hackernoon.com/learn-blockchains-by-building-one-117428612f46)
+* [river.com](https://river.com/learn/how-bitcoin-mining-pools-work/)
+* [Choose an Open Source License](https://choosealicense.com)
+* [Img Shields](https://shields.io)
+* [GitHub Pages](https://pages.github.com)
+
+<p align="right">(<a href="#top">back to top</a>)</p>
+
+
+
+<!-- MARKDOWN LINKS & IMAGES -->
+<!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
+[contributors-shield]: https://img.shields.io/github/contributors/ock666/python-blockchain.svg?style=for-the-badge
+[contributors-url]: https://github.com/ock666/python-blockchain/graphs/contributors
+[forks-shield]: https://img.shields.io/github/forks/ock666/python-blockchain.svg?style=for-the-badge
+[forks-url]: https://github.com/ock666/python-blockchain/network/members
+[stars-shield]: https://img.shields.io/github/stars/ock666/python-blockchain.svg?style=for-the-badge
+[stars-url]: https://github.com/ock666/python-blockchain/stargazers
+[issues-shield]: https://img.shields.io/github/issues/ock666/python-blockchain.svg?style=for-the-badge
+[issues-url]: https://github.com/ock666/python-blockchain/issues
+[license-shield]: https://img.shields.io/github/license/ock666/python-blockchain.svg?style=for-the-badge
+[license-url]: https://github.com/ock666/python-blockchain/blob/master/LICENSE.txt
+[linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
+[linkedin-url]: https://www.linkedin.com/in/oskar-petersen-39a849185/
