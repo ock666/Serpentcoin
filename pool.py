@@ -81,6 +81,7 @@ class pool:
     def new_transaction(self, recipient, amount, unix_time):
         sender = self.pool_identifier
         previous_block_hash = self.get_last_block_hash()
+
         trans_data = {
             'sender': sender,
             'recipient': recipient,
@@ -90,12 +91,26 @@ class pool:
             'public_key_hex': self.public_key_hex
         }
 
-        hashed_trans = self.hash(trans_data)
+        total_bytes = self.calculate_bytes(trans_data)
+        fee = self.calculate_fee(total_bytes)
+
+        transaction = {
+            'sender': sender,
+            'recipient': recipient,
+            'amount': amount,
+            'fee': fee,
+            'time_submitted': trans_data['time_submitted'],
+            'previous_block_hash': previous_block_hash,
+            'public_key_hex': self.public_key_hex
+        }
+
+        hashed_trans = self.hash(transaction)
 
         trans_with_hash = {
             'sender': sender,
             'recipient': recipient,
             'amount': amount,
+            'fee': fee,
             'time_submitted': trans_data['time_submitted'],
             'previous_block_hash': previous_block_hash,
             'public_key_hex': self.public_key_hex,
@@ -107,6 +122,7 @@ class pool:
             'sender': sender,
             'recipient': recipient,
             'amount': amount,
+            'fee': fee,
             'time_submitted': trans_data['time_submitted'],
             'previous_block_hash': previous_block_hash,
             'public_key_hex': self.public_key_hex,
@@ -191,6 +207,18 @@ class pool:
         if response.status_code == 400:
             print("stale proof submitted, getting new proof")
 
+    # Fee calculations
+    def calculate_bytes(self, transaction):
+        tx_string = json.dumps(transaction)
+        tx_bytes = tx_string.encode('ascii')
+        return len(tx_bytes)
+
+    def calculate_fee(self, tx_bytes_length):
+        per_kb_fee = 0.25
+        sig_hash_bytes = 800
+        total = tx_bytes_length + sig_hash_bytes
+        return (total / 1000) * per_kb_fee
+
     # Share calculations
 
     def count_shares(self, shares):
@@ -217,7 +245,7 @@ class pool:
 
         for address in addresses:
             block_reward = 10
-            pool_fee = 0.5
+            pool_fee = 0.9
             contributed = self.share_dict.get(address)
             print(address, "total shares: ", contributed)
             split = contributed / total_shares
