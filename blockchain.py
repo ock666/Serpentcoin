@@ -378,19 +378,26 @@ def new_transaction():
         print('Error 400: Transaction Malformed')
         return 'Missing values', 400
 
+    # Check that the broadcasted transaction is in the nodes mem-pool already if so return an error and break
     if Validation.transaction_in_pool(blockchain.current_transactions, values):
         print('Error 440: Transaction already in this nodes mem-pool')
         return 'Transaction already in this nodes mem-pool', 440
 
+    # Check if this address already has a transaction in the chain
     for transaction in blockchain.current_transactions:
         if transaction['sender'] == values['sender']:
             print('Error 420: One Transaction per Block')
             return 'One Transaction per block, wait for next block confirmation', 420
 
+    # Check if the sender is trying to send themselves coins to the same address, this is not allowed
+    if values['sender'] == values['recipient']:
+        return "You cant send a transaction to yourself", 430
 
 
+    # If all checks clear continue validation
     print("New transaction: ", values, "\n...Validating...")
 
+    # Format for transaction data for hash verification
     trans_to_be_hashed = {
         'sender': values['sender'],
         'recipient': values['recipient'],
@@ -400,17 +407,21 @@ def new_transaction():
         'public_key_hex': values['public_key_hex']
     }
 
+    # Check the local hash matches what has been provided
+    # If this fails the transaction has been tampered with or a transmission error has occured
     local_trans_hash = blockchain.hash(trans_to_be_hashed)
 
+    # If the transaction fails hash verification we throw it out and return an error
     if local_trans_hash != values['transaction_hash']:
         print("Transaction hash mismatch")
         response = {'message': f'Transaction hash failed CRC'}
         return response, 450
 
+    # If the Hash is correct we proceed
     else:
         print("Transaction Hash verified!")
 
-
+    # Format of transaction data for signature verification
     trans_to_be_validated = {
         'sender': values['sender'],
         'recipient': values['recipient'],
@@ -421,13 +432,16 @@ def new_transaction():
         'transaction_hash': values['transaction_hash']
     }
 
+    # This line checks the signature against the broadcasted data If true we proceed
+    # If not we throw out the transaction as it has been tampered with
     if Validation.validate_signature(values['public_key_hex'], values['signature'], trans_to_be_validated):
 
+        #Check if funds are available for the given address, or if the transaction is a Coinbase Reward
         if values['sender'] == 'Coinbase Reward' or Validation.enumerate_funds(
                 values['sender'], blockchain.chain) >= values['amount']:
             print('funds are available')
 
-            # Create a new Transaction
+            # Create a new Transaction in the mempool to await confirmation
             index = blockchain.new_transaction(values['sender'], values['recipient'], values['amount'],
                                                values['time_submitted'], values['previous_block_hash'],
                                                values['public_key_hex'], values['transaction_hash'],
@@ -436,10 +450,11 @@ def new_transaction():
             response = {'message': f'Transaction will be added to Block {index}'}
             return jsonify(response), 201
 
+        # If theres not enough funds we throw an error and discard the transaction
         else:
             response = {'message': f'Not enough funds for transaction'}
             return jsonify(response), 220
-
+    # If the signature fails verification we throw out the transaction and throw an error
     else:
         response = {'message': f'Transaction signature not valid'}
         return jsonify(response), 460
@@ -462,6 +477,7 @@ def receive_proof():
     if not proof_valid:
         return "invalid proof", 400
 
+    # If the proof is valid we will proceed
     if proof_valid:
         print("Valid Proof Submitted...\n")
         # if proof is valid we will continue to assign variables
@@ -471,6 +487,7 @@ def receive_proof():
         signature = values['signature']
         unix_time = time()
 
+        # Format of proof data to be verified
         trans_data = {
             'proof': proof,
             'last_proof': last_proof,
@@ -478,7 +495,7 @@ def receive_proof():
             'public_key_hex': public_key_hex,
             'previous_block_hash': previous_hash
         }
-
+        # If the signature is verified we will proceed with creating a block
         if Validation.validate_signature(public_key_hex, signature, trans_data):
             print('Signature valid! proceeding...\n')
             block_reward_transaction = {
@@ -506,7 +523,7 @@ def receive_proof():
 
 
                 # We must receive a reward for finding the proof.
-                # The sender is "0" to signify that this node has mined a new coin.
+                # The sender is "Coinbase" to signify a new block reward has been mined.
             blockchain.new_transaction(full_block_reward_transaction['sender'],
                                        full_block_reward_transaction['recipient'],
                                        full_block_reward_transaction['amount'],
@@ -519,6 +536,7 @@ def receive_proof():
             block = blockchain.new_block(proof, unix_time, previous_hash)
             print("New block forged at: ", unix_time, " by ", confirming_address)
             return block, 200
+        # If signature fails validation we discard the proof/block
         if not Validation.validate_signature(public_key_hex, signature, trans_data):
             print('signature failed verification')
             return "signature malformed", 400

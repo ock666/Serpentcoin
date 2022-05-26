@@ -104,6 +104,9 @@ class Wallet:
         sender = self.public_key_hash
         previous_block_hash = self.get_last_block_hash()
 
+        if recipient == sender:
+            return False
+
         trans_data = {
             'sender': sender,
             'recipient': recipient,
@@ -260,11 +263,12 @@ while True:
         time = wallet.unix_time
         recipient = values['-ADDRESS-']
         amount = float(values['-AMOUNT-'])
+
         if wallet.new_transaction(recipient, amount, time):
             sg.popup(
                 'Transaction submitted and accepted by network...\nPlease wait for next block confirmation for transaction to confirm')
         else:
             sg.popup(
-                'Transaction denied by network\nyou either have unconfirmed transactions in the mempool or insufficient balance.\nPlease try again')
+                'Transaction denied by network\nyou either have unconfirmed transactions in the mempool or insufficient balance.\nOr you may have accidentally tried to send yourself a transaction\nPlease try again')
 
 window.close()
