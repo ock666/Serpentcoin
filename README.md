@@ -247,7 +247,7 @@ view your transaction history within the wallet
     - [ ] Fix up some of the response codes and json messages
     - [ ] code clean up, bug fixes, and optimisation
     - [ ] unit test more of the code
-- [ ] Transaction Fees
+- [x] Transaction Fees
 - [ ] Implement blockchain explorer
     - [ ] develop method to call chain API from a node and enter the values into a database
     - [ ] develop backend to process chain data from database and analyse it
