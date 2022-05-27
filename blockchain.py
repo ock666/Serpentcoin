@@ -646,6 +646,9 @@ def receive_block():
         }
         return jsonify(response), 400
 
+@app.route('/mempool', methods=['GET'])
+def mempool():
+    return jsonify(blockchain.current_transactions), 200
 
 
 @app.route('/proof', methods=['GET'])
