@@ -76,11 +76,28 @@ class pool:
         else:
             print("couldn't obtain proof")
 
+    def get_mempool(self):
+        response = requests.get(f'http://{self.node_address}/mempool')
+        if response.status_code == 200:
+            return response.json()
+        else:
+            print("couldn't obtain mem-pool")
+
+    def get_fees(self):
+        mempool = self.get_mempool()
+        mempool_fees = 0
+        for transaction in mempool:
+            fee = transaction['fee']
+            mempool_fees += fee
+        print("Total block fees: ", mempool_fees)
+        return mempool_fees
+
     # functions for transactions
 
     def new_transaction(self, recipient, amount, unix_time):
         sender = self.pool_identifier
         previous_block_hash = self.get_last_block_hash()
+
         trans_data = {
             'sender': sender,
             'recipient': recipient,
@@ -90,12 +107,26 @@ class pool:
             'public_key_hex': self.public_key_hex
         }
 
-        hashed_trans = self.hash(trans_data)
+        total_bytes = self.calculate_bytes(trans_data)
+        fee = self.calculate_fee(total_bytes)
+
+        transaction = {
+            'sender': sender,
+            'recipient': recipient,
+            'amount': amount,
+            'fee': fee,
+            'time_submitted': trans_data['time_submitted'],
+            'previous_block_hash': previous_block_hash,
+            'public_key_hex': self.public_key_hex
+        }
+
+        hashed_trans = self.hash(transaction)
 
         trans_with_hash = {
             'sender': sender,
             'recipient': recipient,
             'amount': amount,
+            'fee': fee,
             'time_submitted': trans_data['time_submitted'],
             'previous_block_hash': previous_block_hash,
             'public_key_hex': self.public_key_hex,
@@ -107,6 +138,7 @@ class pool:
             'sender': sender,
             'recipient': recipient,
             'amount': amount,
+            'fee': fee,
             'time_submitted': trans_data['time_submitted'],
             'previous_block_hash': previous_block_hash,
             'public_key_hex': self.public_key_hex,
@@ -191,6 +223,18 @@ class pool:
         if response.status_code == 400:
             print("stale proof submitted, getting new proof")
 
+    # Fee calculations
+    def calculate_bytes(self, transaction):
+        tx_string = json.dumps(transaction)
+        tx_bytes = tx_string.encode('ascii')
+        return len(tx_bytes)
+
+    def calculate_fee(self, tx_bytes_length):
+        per_kb_fee = 0.25
+        sig_hash_bytes = 800
+        total = tx_bytes_length + sig_hash_bytes
+        return (total / 1000) * per_kb_fee
+
     # Share calculations
 
     def count_shares(self, shares):
@@ -213,16 +257,17 @@ class pool:
     def calculate_split(self):
         total_shares = sum(self.share_dict.values())
         addresses = list(self.share_dict.keys())
-        print(total_shares)
+        block_fees = pool.get_fees()
+        print("Total shares contributed this round: ", total_shares)
 
         for address in addresses:
             block_reward = 10
-            pool_fee = 0.5
+            pool_fee = 0.1
             contributed = self.share_dict.get(address)
             print(address, "total shares: ", contributed)
             split = contributed / total_shares
             print("share of reward", split)
-            total_reward = (block_reward * split) - pool_fee
+            total_reward = ((block_reward + block_fees) * split) - pool_fee
             print("total reward: ", total_reward)
             if address in self.unpaid_rewards:
                 self.unpaid_rewards[address] += total_reward
@@ -238,6 +283,8 @@ class pool:
         if confirmed:
             print(amount, " paid out to ", address, " at ", unix_time)
             self.unpaid_rewards[address] = 0
+        if not confirmed:
+            print("Reward Share error")
 
 
 
@@ -303,10 +350,11 @@ def receive_proof():
         }
         if Validation.validate_signature(public_key_hex, signature, trans_data):
             print("signature valid")
-            pool.send_proof(proof=proof, prev_proof=last_proof)
             pool.calculate_split()
+            pool.send_proof(proof=proof, prev_proof=last_proof)
             for address in pool.unpaid_rewards:
                 amount = pool.unpaid_rewards.get(address)
+                print(amount)
                 if amount >= 20:
                     pool.dispense_reward(address=address, amount=amount)
                     return "ok", 200

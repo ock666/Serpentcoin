@@ -33,6 +33,9 @@ class Blockchain:
         # port to run blockchain on
         self.port = input("Please input port number for chain to run on\n")
 
+        # total pending fees
+        self.pending_fees = 0
+
 
 
         # what to do if the directory 'data' is not present, if not present; creates it.
@@ -151,12 +154,13 @@ class Blockchain:
 
         return block_with_hash
 
-    def new_transaction(self, sender, recipient, amount, unix_time, previous_block_hash, pub_key_hex, trans_hash,
+    def new_transaction(self, sender, recipient, amount, fee, unix_time, previous_block_hash, pub_key_hex, trans_hash,
                         signature):
         trans_data = {
             'sender': sender,
             'recipient': recipient,
             'amount': amount,
+            'fee': fee,
             'time_submitted': unix_time,
             'previous_block_hash': previous_block_hash,
             'public_key_hex': pub_key_hex,
@@ -372,7 +376,7 @@ def new_transaction():
     values = request.get_json()
 
     # Check that the required fields are in the POST'ed data
-    required = ['sender', 'recipient', 'amount', 'time_submitted', 'previous_block_hash', 'public_key_hex',
+    required = ['sender', 'recipient', 'amount', 'fee', 'time_submitted', 'previous_block_hash', 'public_key_hex',
                 'transaction_hash', 'signature']
     if not all(k in values for k in required):
         print('Error 400: Transaction Malformed')
@@ -393,6 +397,10 @@ def new_transaction():
     if values['sender'] == values['recipient']:
         return "You cant send a transaction to yourself", 430
 
+    #check if the minimum fee has been paid
+    if values['fee'] < .05:
+        return "Please send transaction with minimum fee of .05", 410
+
 
     # If all checks clear continue validation
     print("New transaction: ", values, "\n...Validating...")
@@ -402,6 +410,7 @@ def new_transaction():
         'sender': values['sender'],
         'recipient': values['recipient'],
         'amount': values['amount'],
+        'fee': values['fee'],
         'time_submitted': values['time_submitted'],
         'previous_block_hash': values['previous_block_hash'],
         'public_key_hex': values['public_key_hex']
@@ -426,6 +435,7 @@ def new_transaction():
         'sender': values['sender'],
         'recipient': values['recipient'],
         'amount': values['amount'],
+        'fee': values['fee'],
         'time_submitted': values['time_submitted'],
         'previous_block_hash': values['previous_block_hash'],
         'public_key_hex': values['public_key_hex'],
@@ -442,10 +452,14 @@ def new_transaction():
             print('funds are available')
 
             # Create a new Transaction in the mempool to await confirmation
-            index = blockchain.new_transaction(values['sender'], values['recipient'], values['amount'],
+            index = blockchain.new_transaction(values['sender'], values['recipient'], values['amount'], values['fee'],
                                                values['time_submitted'], values['previous_block_hash'],
                                                values['public_key_hex'], values['transaction_hash'],
                                                values['signature'])
+
+            # add the fee to pending fees
+            blockchain.pending_fees += values['fee']
+
             print(f'Transaction will be added to Block {index}')
             response = {'message': f'Transaction will be added to Block {index}'}
             return jsonify(response), 201
@@ -502,6 +516,7 @@ def receive_proof():
                 'sender': 'Coinbase Reward',
                 'recipient': confirming_address,
                 'amount': 10,
+                'fee': 0,
                 'time_submitted': unix_time,
                 'previous_block_hash': previous_hash,
                 'public_key_hex': public_key_hex,
@@ -514,6 +529,7 @@ def receive_proof():
                 'sender': 'Coinbase Reward',
                 'recipient': confirming_address,
                 'amount': 10,
+                'fee': 0,
                 'time_submitted': block_reward_transaction['time_submitted'],
                 'previous_block_hash': previous_hash,
                 'public_key_hex': blockchain.public_key_hex,
@@ -527,11 +543,64 @@ def receive_proof():
             blockchain.new_transaction(full_block_reward_transaction['sender'],
                                        full_block_reward_transaction['recipient'],
                                        full_block_reward_transaction['amount'],
+                                       full_block_reward_transaction['fee'],
                                        full_block_reward_transaction['time_submitted'],
                                        full_block_reward_transaction['previous_block_hash'],
                                        full_block_reward_transaction['public_key_hex'],
                                        full_block_reward_transaction['transaction_hash'],
                                        full_block_reward_transaction['signature'])
+
+            # If there are pending fees create a transaction to award fees to miner
+            if blockchain.pending_fees > 0:
+                fee_reward_trans = {
+                    'sender': 'Transaction Fee Reward',
+                    'recipient': confirming_address,
+                    'amount': blockchain.pending_fees,
+                    'fee': 0,
+                    'time_submitted': block_reward_transaction['time_submitted'],
+                    'previous_block_hash': previous_hash,
+                    'public_key_hex': blockchain.public_key_hex,
+                }
+                signed_fees = blockchain.sign(fee_reward_trans)
+
+                fee_reward_trans_with_sig = {
+                    'sender': 'Transaction Fee Reward',
+                    'recipient': confirming_address,
+                    'amount': blockchain.pending_fees,
+                    'fee': 0,
+                    'time_submitted': block_reward_transaction['time_submitted'],
+                    'previous_block_hash': previous_hash,
+                    'public_key_hex': blockchain.public_key_hex,
+                    'signature': signed_fees,
+                }
+
+                hashed_fees = blockchain.hash(fee_reward_trans_with_sig)
+
+                fee_reward_trans_with_hash = {
+                    'sender': 'Transaction Fee Reward',
+                    'recipient': confirming_address,
+                    'amount': blockchain.pending_fees,
+                    'fee': 0,
+                    'time_submitted': block_reward_transaction['time_submitted'],
+                    'previous_block_hash': previous_hash,
+                    'public_key_hex': blockchain.public_key_hex,
+                    'signature': signed_fees,
+                    'transaction_hash': hashed_fees
+                }
+
+                blockchain.new_transaction(fee_reward_trans_with_hash['sender'],
+                                           fee_reward_trans_with_hash['recipient'],
+                                           fee_reward_trans_with_hash['amount'],
+                                           fee_reward_trans_with_hash['fee'],
+                                           fee_reward_trans_with_hash['time_submitted'],
+                                           fee_reward_trans_with_hash['previous_block_hash'],
+                                           fee_reward_trans_with_hash['public_key_hex'],
+                                           fee_reward_trans_with_hash['transaction_hash'],
+                                           fee_reward_trans_with_hash['signature'])
+
+                blockchain.pending_fees = 0
+
+
                 # Forge the new Block by adding it to the chain
             block = blockchain.new_block(proof, unix_time, previous_hash)
             print("New block forged at: ", unix_time, " by ", confirming_address)
@@ -581,6 +650,9 @@ def receive_block():
         }
         return jsonify(response), 400
 
+@app.route('/mempool', methods=['GET'])
+def mempool():
+    return jsonify(blockchain.current_transactions), 200
 
 
 @app.route('/proof', methods=['GET'])

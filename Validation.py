@@ -22,7 +22,9 @@ def enumerate_funds(address, chain):
 
             if transaction['sender'] == address:
                 amount = transaction['amount']
+                fee = transaction['fee']
                 inputs.append(amount)
+                inputs.append(fee)
 
     total_outputs = sum(outputs)
     total_inputs = sum(inputs)

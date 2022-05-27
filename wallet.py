@@ -31,33 +31,31 @@ class Wallet:
         event, values = window.read()
         window.close()
 
+        # variable inits
         self.node = values[0]
         self.nodes.append(self.node)
 
         sg.popup("Connecting to ", values[0])
 
+        # get the chain from the blockchain node
         self.chain = self.get_chain()
 
+        #load our wallet file
         wallet_file = json.load(open('data/wallet.json', 'r'))
         self.private_key = RSA.import_key(wallet_file['private key'])
         self.public_key = RSA.import_key(wallet_file['public key'])
         self.public_key_hex = wallet_file['public key hex']
         self.public_key_hash = wallet_file['public key hash']
 
+        # if wallet doesnt exist we'll generate one
         if not os.path.exists('data'):
             os.makedirs('data')
 
         if not os.path.isfile('data/wallet.json'):
             self.generate_wallet()
 
-    def get_balance(self):
-        chain_balance = Validation.enumerate_funds(self.public_key_hash, self.chain)
-        if chain_balance > 0:
-            return chain_balance
 
-        if chain_balance == False:
-            return 0
-
+    # wallet file functions
     def generate_wallet(self):
 
         private_key = RSA.generate(2048)
@@ -76,6 +74,14 @@ class Wallet:
         }
         self.write_json(wallet_data, 'w')
 
+    def write_json(self, data, mode, filename='data/wallet.json'):
+        # opens the file in write mode
+        with open(filename, mode) as file:
+            block_dict = json.dumps(data, indent=6)
+            file.write(block_dict)
+
+
+    # hash functions
     @staticmethod
     def hash(block):
         # We must make sure that the Dictionary is Ordered, or we'll have inconsistent hashes
@@ -93,19 +99,15 @@ class Wallet:
             h.update(data)
             return h.hexdigest()
 
-    def write_json(self, data, mode, filename='data/wallet.json'):
-        # opens the file in write mode
-        with open(filename, mode) as file:
-            block_dict = json.dumps(data, indent=6)
-            file.write(block_dict)
 
+
+
+    # functions for transactions
     def new_transaction(self, recipient, amount, unix_time):
 
         sender = self.public_key_hash
         previous_block_hash = self.get_last_block_hash()
 
-        if recipient == sender:
-            return False
 
         trans_data = {
             'sender': sender,
@@ -115,13 +117,27 @@ class Wallet:
             'previous_block_hash': previous_block_hash,
             'public_key_hex': self.public_key_hex
         }
+        total_bytes = self.calculate_bytes(trans_data)
+        fee = self.calculate_fee(total_bytes)
+        total_amount = amount + fee
 
-        hashed_trans = self.hash(trans_data)
+        transaction = {
+            'sender': sender,
+            'recipient': recipient,
+            'amount': amount,
+            'fee': fee,
+            'time_submitted': unix_time,
+            'previous_block_hash': previous_block_hash,
+            'public_key_hex': self.public_key_hex
+        }
+
+        hashed_trans = self.hash(transaction)
 
         trans_with_hash = {
             'sender': sender,
             'recipient': recipient,
             'amount': amount,
+            'fee': fee,
             'time_submitted': trans_data['time_submitted'],
             'previous_block_hash': previous_block_hash,
             'public_key_hex': self.public_key_hex,
@@ -134,6 +150,7 @@ class Wallet:
             'sender': sender,
             'recipient': recipient,
             'amount': amount,
+            'fee': fee,
             'time_submitted': trans_data['time_submitted'],
             'previous_block_hash': previous_block_hash,
             'public_key_hex': self.public_key_hex,
@@ -141,12 +158,33 @@ class Wallet:
             'signature': signed_trans
         }
 
-        if self.broadcast_transaction(full_transaction):
-            self.chain = self.get_chain()
-            return True
-        else:
-            self.chain = self.get_chain()
-            return False
+
+        confirmation_window_layout = [
+            [sg.Text("Are you sure you want to send this Transaction?")],
+            [[sg.Text("Recipient", justification='left'), sg.Text(recipient, justification='right')]],
+            [[sg.Text("Amount to send: ", justification='left')], [sg.Text(amount, justification='right')]],
+            [[sg.Text("Transaction Fee: ", justification='left')], sg.Text(fee, justification='right')],
+            [[sg.Text("Total Amount: ", justification='left')], sg.Text(total_amount, justification='right')],
+            [[sg.Button('Confirm')], [sg.Button('Exit')]]
+        ]
+
+        window = sg.Window('Python-blockchain Wallet', confirmation_window_layout)
+
+        event, values = window.read()
+
+        if event in (sg.WIN_CLOSED, 'Exit'):
+            window.close()
+            return "cancelled"
+
+        if event in 'Confirm':
+            if self.broadcast_transaction(full_transaction):
+                self.chain = self.get_chain()
+                window.close()
+                return "confirmed"
+            else:
+                self.chain = self.get_chain()
+                window.close()
+                return False
 
     def broadcast_transaction(self, transaction):
 
@@ -166,10 +204,31 @@ class Wallet:
         signature = pkcs1_15.new(self.private_key).sign(hash_object)
         return signature
 
+    def calculate_bytes(self, transaction):
+        tx_string = json.dumps(transaction)
+        tx_bytes = tx_string.encode('ascii')
+        return len(tx_bytes)
+
+    def calculate_fee(self, tx_bytes_length):
+        per_kb_fee = 0.25
+        sig_hash_bytes = 800
+        total = tx_bytes_length + sig_hash_bytes
+        return (total / 1000) * per_kb_fee
+
     def sign(self, data):
         signature_hex = binascii.hexlify(self.sign_transaction_data(data)).decode("utf-8")
 
         return signature_hex
+
+    # functions for getting blockchain data
+
+    def get_balance(self):
+        chain_balance = Validation.enumerate_funds(self.public_key_hash, self.chain)
+        if chain_balance > 0:
+            return chain_balance
+
+        if chain_balance == False:
+            return 0
 
     def get_block_height(self):
         for node in self.nodes:
@@ -263,12 +322,14 @@ while True:
         time = wallet.unix_time
         recipient = values['-ADDRESS-']
         amount = float(values['-AMOUNT-'])
-
-        if wallet.new_transaction(recipient, amount, time):
+        if wallet.new_transaction(recipient, amount, time) == "confirmed":
             sg.popup(
                 'Transaction submitted and accepted by network...\nPlease wait for next block confirmation for transaction to confirm')
+            continue
+        if wallet.new_transaction(recipient, amount, time) == "cancelled":
+            sg.popup("Transaction Cancelled")
         else:
             sg.popup(
-                'Transaction denied by network\nyou either have unconfirmed transactions in the mempool or insufficient balance.\nOr you may have accidentally tried to send yourself a transaction\nPlease try again')
+                'Transaction denied by network\nyou either have unconfirmed transactions in the mempool or insufficient balance.\nPlease try again')
 
 window.close()
