@@ -262,7 +262,7 @@ class pool:
 
         for address in addresses:
             block_reward = 10
-            pool_fee = 0.1
+            pool_fee = 0.2
             contributed = self.share_dict.get(address)
             print(address, "total shares: ", contributed)
             split = contributed / total_shares

@@ -121,8 +121,8 @@ class Miner:
                     if not self.valid_proof(last_proof, proof):
                         shares.append(share)
 
-                    if len(shares) >= 200000:
-                        print("collected 200000 shares, now sharing with pool")
+                    if len(shares) >= 500000:
+                        print("collected 500000 shares, now sharing with pool")
 
 
                         requests.post(f'http://{self.node}/submit', json=shares)
@@ -137,7 +137,8 @@ class Miner:
                     if self.valid_proof(last_proof, proof):
                         print('Proof Found: ', proof)
                         headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-
+                        requests.post(f'http://{self.node}/submit', json=shares)
+                        shares = []
                         proof_transaction = {
                             'proof': proof,
                             'last_proof': last_proof,
