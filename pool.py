@@ -357,7 +357,7 @@ def receive_proof():
                     if amount >= 20:
                         pool.dispense_reward(address=address, amount=amount)
                         return "ok", 200
-                return "ok", 200
+            return "ok", 200
 
 
 
