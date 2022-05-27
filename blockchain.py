@@ -397,6 +397,10 @@ def new_transaction():
     if values['sender'] == values['recipient']:
         return "You cant send a transaction to yourself", 430
 
+    #check if the minimum fee has been paid
+    if values['fee'] < .05:
+        return "Please send transaction with minimum fee of .05", 410
+
 
     # If all checks clear continue validation
     print("New transaction: ", values, "\n...Validating...")
