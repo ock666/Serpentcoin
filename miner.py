@@ -108,7 +108,6 @@ class Miner:
 
                 for i in range(500001):
 
-                    print(len(shares))
                     proof = random.randint(1, 9999999999)
                     proof_to_be_hashed = int(str(last_proof) + str(proof))
 
