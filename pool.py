@@ -218,9 +218,11 @@ class pool:
 
         if response.status_code == 200:
             print('New Block Forged! Proof Accepted ', proof)
+            return True
 
         if response.status_code == 400:
             print("stale proof submitted, getting new proof")
+            return False
 
     # Fee calculations
     def calculate_bytes(self, transaction):
@@ -357,7 +359,7 @@ def receive_proof():
                     if amount >= 20:
                         pool.dispense_reward(address=address, amount=amount)
                         return "ok", 200
-            return "ok", 200
+                return "ok", 200
 
 
 
