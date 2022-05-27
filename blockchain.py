@@ -34,7 +34,7 @@ class Blockchain:
         self.port = input("Please input port number for chain to run on\n")
 
         # total pending fees
-        self.pending_fees = float(0)
+        self.pending_fees = 0
 
 
 
@@ -458,7 +458,7 @@ def new_transaction():
                                                values['signature'])
 
             # add the fee to pending fees
-            blockchain.pending_fees += float(values['fee'])
+            blockchain.pending_fees += values['fee']
 
             print(f'Transaction will be added to Block {index}')
             response = {'message': f'Transaction will be added to Block {index}'}
@@ -638,7 +638,6 @@ def receive_block():
         }
         # clears the current transaction table, i'll just call it the mem-pool even though is isnt a proper one
         blockchain.current_transactions = []
-        blockchain.pending_fees = []
         print('transactions in mem-pool cleared')
         print(blockchain.current_transactions)
         return jsonify(response), 200

@@ -219,11 +219,9 @@ class pool:
 
         if response.status_code == 200:
             print('New Block Forged! Proof Accepted ', proof)
-            return True
 
         if response.status_code == 400:
             print("stale proof submitted, getting new proof")
-            return False
 
     # Fee calculations
     def calculate_bytes(self, transaction):
@@ -264,7 +262,7 @@ class pool:
 
         for address in addresses:
             block_reward = 10
-            pool_fee = 0.35
+            pool_fee = 0.2
             contributed = self.share_dict.get(address)
             print(address, "total shares: ", contributed)
             split = contributed / total_shares
@@ -353,17 +351,14 @@ def receive_proof():
         if Validation.validate_signature(public_key_hex, signature, trans_data):
             print("signature valid")
             pool.calculate_split()
-            if pool.send_proof(proof=proof, prev_proof=last_proof):
-                for address in pool.unpaid_rewards:
-                    amount = pool.unpaid_rewards.get(address)
-                    print(amount)
-                    if amount >= 20:
-                        pool.dispense_reward(address=address, amount=amount)
-
-                return "ok", 200
-            else:
-                print("stale proof submitted getting new proof")
-                return "stale share", 400
+            pool.send_proof(proof=proof, prev_proof=last_proof)
+            for address in pool.unpaid_rewards:
+                amount = pool.unpaid_rewards.get(address)
+                print(amount)
+                if amount >= 20:
+                    pool.dispense_reward(address=address, amount=amount)
+                    return "ok", 200
+            return "ok", 200
 
 
 
