@@ -638,6 +638,7 @@ def receive_block():
         }
         # clears the current transaction table, i'll just call it the mem-pool even though is isnt a proper one
         blockchain.current_transactions = []
+        blockchain.pending_fees = []
         print('transactions in mem-pool cleared')
         print(blockchain.current_transactions)
         return jsonify(response), 200
