@@ -106,7 +106,7 @@ class Miner:
 
                 last_proof = self.get_last_proof()
 
-                for i in range(200001):
+                for i in range(500001):
 
                     print(len(shares))
                     proof = random.randint(1, 9999999999)

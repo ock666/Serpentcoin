@@ -10,7 +10,6 @@ from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
 import utils
 import logging
-from threading import Thread
 import Validation
 
 
@@ -351,14 +350,14 @@ def receive_proof():
         if Validation.validate_signature(public_key_hex, signature, trans_data):
             print("signature valid")
             pool.calculate_split()
-            pool.send_proof(proof=proof, prev_proof=last_proof)
-            for address in pool.unpaid_rewards:
-                amount = pool.unpaid_rewards.get(address)
-                print(amount)
-                if amount >= 20:
-                    pool.dispense_reward(address=address, amount=amount)
-                    return "ok", 200
-            return "ok", 200
+            if pool.send_proof(proof=proof, prev_proof=last_proof):
+                for address in pool.unpaid_rewards:
+                    amount = pool.unpaid_rewards.get(address)
+                    print(amount)
+                    if amount >= 20:
+                        pool.dispense_reward(address=address, amount=amount)
+                        return "ok", 200
+                return "ok", 200
 
 
 
