@@ -25,7 +25,7 @@
     <br />
     <br />
     ·
-    <a href="https://github.com/ock666/python-blockchain/issues">Report Bug</a>
+    <a href="https://github.com/ock666/python-blockchain/issues">Report a Bug</a>
     ·
     <a href="https://github.com/ock666/python-blockchain/issues">Request Feature</a>
   </p>
@@ -119,7 +119,11 @@ Install the requirements with
    ```sh
    pip install -r requirements.txt
    ```
-3. Run blockchain.py to generate chain.json and wallet.json.
+3. You may need to install tkinter as a dependency for PySimpleGui
+   ```sh
+   apt install python3-tk
+   ```
+4. Run blockchain.py to generate chain.json and wallet.json.
    ```sh
    python3 blockchain.py
    ```
