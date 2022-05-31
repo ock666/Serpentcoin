@@ -19,7 +19,7 @@
   <h3 align="center">Python Blockchain</h3>
 
   <p align="center">
-    A blockchain coded in python
+    A decentralised blockchain coded in python
     <br />
     <a href="https://github.com/ock666/python-blockchain"><strong>Explore the docs »</strong></a>
     <br />
