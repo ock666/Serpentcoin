@@ -126,8 +126,8 @@ class Miner:
                         'public_key_hash': self.public_key_hash,
                         'proof_hash': self.hash(proof_to_be_hashed)
                     }
-                    if not self.valid_proof(last_proof, proof):
-                        shares.append(share)
+
+                    shares.append(share)
 
                     if len(shares) >= 500000:
                         print("collected 500000 shares, now sharing with pool")
