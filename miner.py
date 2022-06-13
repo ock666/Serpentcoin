@@ -16,7 +16,7 @@ class Miner:
     def __init__(self):
         self.mining_mode = input("Please enter mining mode: pool or solo:\n")
         self.node = input('Please enter the address of a node to begin mining:\n')
-        self.difficulty = 1
+        self.difficulty = self.get_difficulty()
 
         if not os.path.isfile('data/wallet.json'):
             utils.generate_wallet()
@@ -50,7 +50,7 @@ class Miner:
         :return: True if correct, False if not.
         """
         valid_guess = ""
-        for i in range(Miner.difficulty):
+        for i in range(self.difficulty):
             valid_guess += "0"
         guess = f'{last_proof}{proof}'.encode()
         guess_hash = hashlib.sha256(guess).hexdigest()
@@ -59,8 +59,7 @@ class Miner:
     def get_difficulty(self):
         value = requests.get(f'http://{self.node}/difficulty')
         if value.status_code == 200:
-            Miner.difficulty = int(value.json())
-            print(f'Mining difficulty is now {Miner.difficulty}')
+            return value.json()
 
     def get_last_block(self):
 
@@ -114,6 +113,7 @@ class Miner:
             while True:
 
                 last_proof = self.get_last_proof()
+                print(f'Last Proof: {last_proof}\nDifficulty: {self.difficulty}')
 
                 for i in range(500001):
 
@@ -170,11 +170,11 @@ class Miner:
                                                  headers=headers)
 
                         if response.status_code == 200:
-                            print('New Block Forged! Proof Accepted ', proof)
+                            print('POOL: New Block Forged! Proof Accepted ', proof)
                             time.sleep(5)
 
                         if response.status_code == 400:
-                            print("stale proof submitted, getting new proof")
+                            print("POOL: stale proof submitted, getting new proof")
 
 
         if self.mining_mode == 'solo':
@@ -212,11 +212,11 @@ class Miner:
                                              headers=headers)
 
                     if response.status_code == 200:
-                        print('New Block Forged! Proof Accepted ', proof)
+                        print('SOLO: New Block Forged! Proof Accepted ', proof)
                         time.sleep(5)
 
                     if response.status_code == 400:
-                        print("stale proof submitted, getting new proof")
+                        print("SOLO: stale proof submitted, getting new proof")
 
 
 Miner = Miner()

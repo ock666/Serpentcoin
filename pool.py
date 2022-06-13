@@ -22,13 +22,14 @@ class pool:
         # init variables
         self.chain = []
         self.miners = []
+
         self.share_dict = {}
         self.unpaid_rewards = {}
         self.transactions = []
         self.node_address = input("Please enter the address of a node\n")
         self.port = 6000
         self.unix_time = time()
-
+        self.difficulty = self.get_difficulty()
         # what to do if the directory 'data' is not present, if not present; creates it.
         if not os.path.exists('data'):
             os.makedirs('data')
@@ -36,6 +37,10 @@ class pool:
         # checks to see if there is a chain.json file, if not present; creates it.
         if not os.path.isfile('data/wallet.json'):
             utils.generate_wallet()
+
+
+
+        print(f'current chain difficulty {self.difficulty}')
 
         # attempting to open wallet file
         wallet_file = json.load(open('data/wallet.json', 'r'))
@@ -49,6 +54,14 @@ class pool:
         response = requests.get(f'http://{self.node_address}/chain')
         if response.status_code == 200:
             return response.json()['chain']
+
+    def get_difficulty(self):
+        response = requests.get(f'http://{self.node_address}/difficulty')
+        if response.status_code == 200:
+            return response.json()
+        else:
+            print("couldn't get difficulty")
+
 
     def get_last_block_hash(self):
         response = requests.get(f'http://{self.node_address}/chain')
@@ -171,10 +184,12 @@ class pool:
         :param proof: Current Proof
         :return: True if correct, False if not.
         """
-
+        valid_guess = ""
+        for i in range(pool.difficulty):
+            valid_guess += "0"
         guess = f'{last_proof}{proof}'.encode()
         guess_hash = hashlib.sha256(guess).hexdigest()
-        return guess_hash[:6] == "000000"
+        return guess_hash[:pool.difficulty] == valid_guess
 
     def hash(self, block):
         # We must make sure that the Dictionary is Ordered, or we'll have inconsistent hashes
@@ -305,7 +320,9 @@ def forward_chain_request():
     return jsonify(forward), 200
 
 
-
+@app.route('/difficulty', methods=['GET'])
+def difficulty():
+    return jsonify(pool.difficulty), 200
 
 @app.route('/proof', methods=['GET'])
 def last_proof():
