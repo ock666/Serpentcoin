@@ -180,10 +180,11 @@ class Miner:
         if self.mining_mode == 'solo':
 
             while True:
-                Miner.get_difficulty()
                 last_proof = self.get_last_proof()
-                proof = self.proof_of_work(last_proof)
                 print("Last Proof: ", last_proof)
+                print("Difficulty Level: ", self.difficulty)
+                proof = self.proof_of_work(last_proof)
+
                 print("Proof: ", proof)
                 if self.valid_proof(last_proof, proof):
                     print('Proof Found: ', proof)
@@ -217,6 +218,7 @@ class Miner:
 
                     if response.status_code == 400:
                         print("SOLO: stale proof submitted, getting new proof")
+                        self.difficulty = self.get_difficulty()
 
 
 Miner = Miner()
