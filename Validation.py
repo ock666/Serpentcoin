@@ -1,6 +1,6 @@
 import binascii
 import json
-
+import hashlib
 from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
 from Crypto.Signature import pkcs1_15
@@ -62,6 +62,12 @@ def validate_signature(public_key, signature, transaction_data):
         return False
 
 
-
+def validate_chain(last_proof, proof, difficulty):
+    valid_guess = ""
+    for i in range(difficulty):
+        valid_guess += "0"
+    guess = f'{last_proof}{proof}'.encode()
+    guess_hash = hashlib.sha256(guess).hexdigest()
+    return guess_hash[:difficulty] == valid_guess
 
 

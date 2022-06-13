@@ -16,6 +16,7 @@ class Miner:
     def __init__(self):
         self.mining_mode = input("Please enter mining mode: pool or solo:\n")
         self.node = input('Please enter the address of a node to begin mining:\n')
+        self.difficulty = 1
 
         if not os.path.isfile('data/wallet.json'):
             utils.generate_wallet()
@@ -40,18 +41,26 @@ class Miner:
 
         return proof
 
-    @staticmethod
-    def valid_proof(last_proof, proof):
+
+    def valid_proof(self, last_proof, proof):
         """
         Validates the Proof
         :param last_proof: Previous Proof
         :param proof: Current Proof
         :return: True if correct, False if not.
         """
-
+        valid_guess = ""
+        for i in range(Miner.difficulty):
+            valid_guess += "0"
         guess = f'{last_proof}{proof}'.encode()
         guess_hash = hashlib.sha256(guess).hexdigest()
-        return guess_hash[:6] == "000000"
+        return guess_hash[:Miner.difficulty] == valid_guess
+
+    def get_difficulty(self):
+        value = requests.get(f'http://{self.node}/difficulty')
+        if value.status_code == 200:
+            Miner.difficulty = int(value.json())
+            print(f'Mining difficulty is now {Miner.difficulty}')
 
     def get_last_block(self):
 
@@ -171,6 +180,7 @@ class Miner:
         if self.mining_mode == 'solo':
 
             while True:
+                Miner.get_difficulty()
                 last_proof = self.get_last_proof()
                 proof = self.proof_of_work(last_proof)
                 print("Last Proof: ", last_proof)
