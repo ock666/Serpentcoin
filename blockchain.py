@@ -136,7 +136,9 @@ class Blockchain:
             'current_hash': block_hash
         }
 
-
+        # set block time check variables before we append the new block
+        last_block_time = self.block_time(self.last_block)
+        new_block_time = block['timestamp']
 
         # function to write the new block to chain.json
         self.write_json(block_with_hash)
@@ -150,9 +152,7 @@ class Blockchain:
         # append the block to the chain list
         self.chain.append(block_with_hash)
 
-        # block time checks
-        last_block_time = self.block_time(self.last_block)
-        new_block_time = block['timestamp']
+
 
         # every 2 blocks the chain will check block time and adjust difficulty accordingly
         if len(self.chain) % 2 == 0:

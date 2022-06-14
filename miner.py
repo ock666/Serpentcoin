@@ -10,6 +10,7 @@ import random
 from Crypto.Signature import pkcs1_15
 from Crypto.Hash import SHA256
 from multiprocessing import Process
+from tqdm import tqdm
 
 class Miner:
 
@@ -108,11 +109,11 @@ class Miner:
     def solo_mine_loop(self):
         start_time = time.time()
         nonce_upper_limit = 9999999999
-
+        process_id = random.randint(1, 99)
         while True:
             last_proof = self.get_last_proof()
             self.difficulty = self.get_difficulty()
-            print(f'Last Proof: {last_proof}\nDifficulty: {self.difficulty}')
+            print(f'\nLast Proof: {last_proof}\nDifficulty: {self.difficulty}')
             current_time = time.time()
 
             if current_time - start_time > 300:
@@ -122,7 +123,7 @@ class Miner:
                 start_time = current_time
                 print(f'upper nonce limit now: {nonce_upper_limit}')
 
-            for i in range(10000000):
+            for i in tqdm(range(10000000), unit="H", unit_scale=1, desc=f"Mining Process ID {process_id}"):
 
                 proof = random.randint(1, nonce_upper_limit)
                 if self.valid_proof(last_proof, proof):
@@ -152,14 +153,14 @@ class Miner:
                                              headers=headers)
 
                     if response.status_code == 200:
-                        print('SOLO: New Block Forged! Proof Accepted ', proof)
+                        print('\nSOLO: New Block Forged! Proof Accepted ', proof)
                         nonce_upper_limit = 9999999999
                         start_time = current_time
                         last_proof = self.get_last_proof()
                         self.difficulty = self.get_difficulty()
 
                     if response.status_code == 400:
-                        print("SOLO: stale proof submitted, getting new proof")
+                        print("\nSOLO: stale proof submitted, getting new proof")
                         nonce_upper_limit = 9999999999
                         start_time = current_time
                         last_proof = self.get_last_proof()
