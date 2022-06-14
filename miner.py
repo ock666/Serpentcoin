@@ -155,12 +155,16 @@ class Miner:
                         print('SOLO: New Block Forged! Proof Accepted ', proof)
                         nonce_upper_limit = 9999999999
                         start_time = current_time
+                        last_proof = self.get_last_proof()
+                        self.difficulty = self.get_difficulty()
 
                     if response.status_code == 400:
                         print("SOLO: stale proof submitted, getting new proof")
                         nonce_upper_limit = 9999999999
                         start_time = current_time
-                    self.difficulty = self.get_difficulty()
+                        last_proof = self.get_last_proof()
+                        self.difficulty = self.get_difficulty()
+
 
     def mine(self):
 
