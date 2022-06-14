@@ -9,12 +9,13 @@ from Crypto.PublicKey import RSA
 import random
 from Crypto.Signature import pkcs1_15
 from Crypto.Hash import SHA256
-
+from multiprocessing import Process
 
 class Miner:
 
     def __init__(self):
         self.mining_mode = input("Please enter mining mode: pool or solo:\n")
+        self.thread_number = input("Please enter the number of threads to use:\n")
         self.node = input('Please enter the address of a node to begin mining:\n')
         self.difficulty = self.get_difficulty()
 
@@ -104,11 +105,69 @@ class Miner:
         block_string = json.dumps(block, sort_keys=True).encode()
         return hashlib.sha256(block_string).hexdigest()
 
+    def solo_mine_loop(self):
+        start_time = time.time()
+        nonce_upper_limit = 9999999999
+
+        while True:
+            last_proof = self.get_last_proof()
+            self.difficulty = self.get_difficulty()
+            print(f'Last Proof: {last_proof}\nDifficulty: {self.difficulty}')
+            current_time = time.time()
+
+            if current_time - start_time > 300:
+                print("expanding upper nonce limit")
+                new_upper_limit = str(nonce_upper_limit) + str(9)
+                nonce_upper_limit = int(new_upper_limit)
+                start_time = current_time
+                print(f'upper nonce limit now: {nonce_upper_limit}')
+
+            for i in range(10000000):
+
+                proof = random.randint(1, nonce_upper_limit)
+                if self.valid_proof(last_proof, proof):
+                    print('Proof Found: ', proof)
+                    headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+
+                    proof_transaction = {
+                        'proof': proof,
+                        'last_proof': last_proof,
+                        'public_key_hash': self.public_key_hash,
+                        'public_key_hex': self.public_key_hex,
+                        'previous_block_hash': self.get_last_hash()
+                    }
+
+                    proof_signature = self.sign(proof_transaction)
+
+                    proof_transaction_with_sig = {
+                        'proof': proof,
+                        'last_proof': last_proof,
+                        'public_key_hash': self.public_key_hash,
+                        'public_key_hex': self.public_key_hex,
+                        'previous_block_hash': self.get_last_hash(),
+                        'signature': proof_signature
+                    }
+
+                    response = requests.post(f'http://{self.node}/miners', json=proof_transaction_with_sig,
+                                             headers=headers)
+
+                    if response.status_code == 200:
+                        print('SOLO: New Block Forged! Proof Accepted ', proof)
+                        nonce_upper_limit = 9999999999
+                        start_time = current_time
+
+                    if response.status_code == 400:
+                        print("SOLO: stale proof submitted, getting new proof")
+                        nonce_upper_limit = 9999999999
+                        start_time = current_time
+                    self.difficulty = self.get_difficulty()
+
     def mine(self):
 
         if self.mining_mode == "pool":
 
             shares = []
+
 
             while True:
 
@@ -179,46 +238,15 @@ class Miner:
 
         if self.mining_mode == 'solo':
 
-            while True:
-                last_proof = self.get_last_proof()
-                print(f'Last Proof: {last_proof}\nDifficulty: {self.difficulty}')
-                self.difficulty = self.get_difficulty()
+            processes = []
+            for i in range(int(self.thread_number)):
+                p = Process(target=self.solo_mine_loop)
+                processes.append(p)
+                p.start()
 
-                for i in range(10000000):
+            for p in processes:
+                p.join()
 
-                    proof = random.randint(1, 9999999999)
-                    if self.valid_proof(last_proof, proof):
-                        print('Proof Found: ', proof)
-                        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-
-                        proof_transaction = {
-                            'proof': proof,
-                            'last_proof': last_proof,
-                            'public_key_hash': self.public_key_hash,
-                            'public_key_hex': self.public_key_hex,
-                            'previous_block_hash': self.get_last_hash()
-                        }
-
-                        proof_signature = self.sign(proof_transaction)
-
-                        proof_transaction_with_sig = {
-                            'proof': proof,
-                            'last_proof': last_proof,
-                            'public_key_hash': self.public_key_hash,
-                            'public_key_hex': self.public_key_hex,
-                            'previous_block_hash': self.get_last_hash(),
-                            'signature': proof_signature
-                        }
-
-                        response = requests.post(f'http://{self.node}/miners', json=proof_transaction_with_sig,
-                                                 headers=headers)
-
-                        if response.status_code == 200:
-                            print('SOLO: New Block Forged! Proof Accepted ', proof)
-
-                        if response.status_code == 400:
-                            print("SOLO: stale proof submitted, getting new proof")
-                        self.difficulty = self.get_difficulty()
 
 
 Miner = Miner()
