@@ -154,7 +154,8 @@ class Blockchain:
         last_block_time = self.block_time(self.last_block)
         new_block_time = block['timestamp']
 
-        if len(self.chain) % 10 == 0:
+        # every 2 blocks the chain will check block time and adjust difficulty accordingly
+        if len(self.chain) % 2 == 0:
             if new_block_time - last_block_time > 800:
                 self.difficulty_adjust("decrease")
 
