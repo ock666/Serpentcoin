@@ -1,3 +1,4 @@
+import random
 import binascii
 import hashlib
 import json
@@ -21,7 +22,9 @@ class pool:
 
         # init variables
         self.chain = []
-        self.miners = []
+        self.lower_proof_range = 0
+        self.upper_proof_range = 1000000
+        self.unchecked_range = range(self.lower_proof_range, self.upper_proof_range)
 
         self.share_dict = {}
         self.unpaid_rewards = {}
@@ -257,11 +260,8 @@ class pool:
         last_proof = self.get_last_proof()
         count = 0
         for share in shares:
-            proof = share['proof']
-            proof_to_be_hashed = int(str(last_proof) + str(proof))
             address = share['public_key_hash']
-
-            if share['proof_hash'] == self.hash(proof_to_be_hashed):
+            if share['last_proof'] == last_proof:
                 if address not in self.share_dict:
                     self.share_dict[address] = 1
                     count += 1
@@ -319,6 +319,17 @@ def forward_chain_request():
     }
     return jsonify(forward), 200
 
+@app.route('/getjob', methods=['GET'])
+def get_job():
+    job = {
+        'lower': pool.lower_proof_range,
+        'upper': pool.upper_proof_range
+    }
+    pool.lower_proof_range = (pool.upper_proof_range + 1)
+    pool.upper_proof_range = (pool.upper_proof_range + 1000000)
+    print(f'Next unchecked range: {pool.lower_proof_range} to {pool.upper_proof_range}')
+    return jsonify(job), 200
+
 
 @app.route('/difficulty', methods=['GET'])
 def difficulty():
@@ -332,8 +343,11 @@ def last_proof():
 
 @app.route('/submit', methods=['POST'])
 def hash_rate_submit():
+    share_id = random.randint(10, 99)
+    print(f"Received Shares! ID {share_id}")
     values = request.get_json()
     pool.count_shares(values)
+    print(f"finished processing Share ID {share_id}")
     return "shares accepted", 200
 
 @app.route('/submit/proof', methods=['POST'])
@@ -352,6 +366,9 @@ def receive_proof():
         return "invalid proof", 400
 
     if proof_valid:
+        #reset search values
+        pool.lower_proof_range = 0
+        pool.upper_proof_range = 1000000
         print("Proof Found!")
         # if proof is valid we will continue to assign variables
         confirming_address = values['public_key_hash']

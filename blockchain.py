@@ -285,7 +285,7 @@ class Blockchain:
                 return False
 
             # Check that the Proof of Work is correct
-            if not Validation.validate_chain(last_block['proof'], block['proof'], last_block['difficulty']):
+            if not Validation.validate_chain(last_block['proof'], block['proof'], block['difficulty']):
                 print('invalid proof on block when syncing')
                 return False
 
@@ -517,9 +517,24 @@ def new_transaction():
 @app.route('/diffupdate', methods=['POST'])
 def receive_difficulty():
     value = request.get_json()
-    blockchain.difficulty = value
-    print(f"new difficulty value: {blockchain.difficulty}")
-    return "ok", 200
+    current_block_time = blockchain.block_time(blockchain.last_block)
+    previous_block_time = blockchain.block_time(blockchain.chain[-2])
+    if current_block_time - previous_block_time > 800:
+        if blockchain.difficulty - int(value) == 1:
+            blockchain.difficulty = value
+            print(f"new difficulty value: {blockchain.difficulty}")
+            return "ok", 200
+
+    if current_block_time - previous_block_time < 500:
+        if int(value) - blockchain.difficulty == 1:
+            blockchain.difficulty = value
+            print(f"new difficulty value: {blockchain.difficulty}")
+            return "ok", 200
+
+    else:
+        print("Denied Difficulty update")
+        return "difficulty not accepted by node", 400
+
 
 
 @app.route('/miners', methods=['POST'])
