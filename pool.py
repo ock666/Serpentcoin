@@ -3,6 +3,7 @@ import binascii
 import hashlib
 import json
 from time import time
+from tqdm import tqdm
 import os
 import requests
 from Crypto.Signature import pkcs1_15
@@ -12,6 +13,8 @@ from Crypto.PublicKey import RSA
 import utils
 import logging
 import Validation
+from multiprocessing import Process
+
 
 
 class pool:
@@ -259,7 +262,7 @@ class pool:
     def count_shares(self, shares):
         last_proof = self.get_last_proof()
         count = 0
-        for share in shares:
+        for share in tqdm(shares):
             address = share['public_key_hash']
             if share['last_proof'] == last_proof:
                 if address not in self.share_dict:
@@ -343,12 +346,20 @@ def last_proof():
 
 @app.route('/submit', methods=['POST'])
 def hash_rate_submit():
+    processes = []
     share_id = random.randint(10, 99)
     print(f"Received Shares! ID {share_id}")
     values = request.get_json()
-    pool.count_shares(values)
-    print(f"finished processing Share ID {share_id}")
-    return "shares accepted", 200
+
+    p = Process(target=pool.count_shares(values))
+    processes.append(p)
+    p.start()
+
+    for p in processes:
+        p.join()
+        print(f"finished processing Share ID {share_id}")
+        return "shares accepted", 200
+
 
 @app.route('/submit/proof', methods=['POST'])
 def receive_proof():
