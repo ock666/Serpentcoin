@@ -1,5 +1,6 @@
 requests==2.26.0
 Flask==2.0.2
 pycryptodome
-
 PySimpleGUI~=4.60.0
+tqdm~=4.64.0
+qrcode~=7.3.1

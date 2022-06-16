@@ -9,13 +9,16 @@ from Crypto.PublicKey import RSA
 import random
 from Crypto.Signature import pkcs1_15
 from Crypto.Hash import SHA256
-
+from multiprocessing import Process
+from tqdm import tqdm
 
 class Miner:
 
     def __init__(self):
         self.mining_mode = input("Please enter mining mode: pool or solo:\n")
+        self.thread_number = input("Please enter the number of threads to use:\n")
         self.node = input('Please enter the address of a node to begin mining:\n')
+        self.difficulty = self.get_difficulty()
 
         if not os.path.isfile('data/wallet.json'):
             utils.generate_wallet()
@@ -40,18 +43,25 @@ class Miner:
 
         return proof
 
-    @staticmethod
-    def valid_proof(last_proof, proof):
+
+    def valid_proof(self, last_proof, proof):
         """
         Validates the Proof
         :param last_proof: Previous Proof
         :param proof: Current Proof
         :return: True if correct, False if not.
         """
-
+        valid_guess = ""
+        for i in range(self.difficulty):
+            valid_guess += "0"
         guess = f'{last_proof}{proof}'.encode()
         guess_hash = hashlib.sha256(guess).hexdigest()
-        return guess_hash[:6] == "000000"
+        return guess_hash[:Miner.difficulty] == valid_guess
+
+    def get_difficulty(self):
+        value = requests.get(f'http://{self.node}/difficulty')
+        if value.status_code == 200:
+            return value.json()
 
     def get_last_block(self):
 
@@ -96,85 +106,26 @@ class Miner:
         block_string = json.dumps(block, sort_keys=True).encode()
         return hashlib.sha256(block_string).hexdigest()
 
-    def mine(self):
+    def solo_mine_loop(self):
+        start_time = time.time()
+        nonce_upper_limit = 9999999999
+        process_id = random.randint(1, 99)
+        while True:
+            last_proof = self.get_last_proof()
+            self.difficulty = self.get_difficulty()
+            print(f'\nLast Proof: {last_proof}\nDifficulty: {self.difficulty}')
+            current_time = time.time()
 
-        if self.mining_mode == "pool":
+            if current_time - start_time > 3000:
+                print("expanding upper nonce limit")
+                new_upper_limit = str(nonce_upper_limit) + str(9)
+                nonce_upper_limit = int(new_upper_limit)
+                start_time = current_time
+                print(f'upper nonce limit now: {nonce_upper_limit}')
 
-            shares = []
+            for i in tqdm(range(10000000), unit="H", unit_scale=1, desc=f"Mining Process ID {process_id}"):
 
-            while True:
-
-                last_proof = self.get_last_proof()
-
-                for i in range(500001):
-
-                    proof = random.randint(1, 9999999999)
-                    proof_to_be_hashed = int(str(last_proof) + str(proof))
-
-                    share = {
-                        'proof': proof,
-                        'last_proof': last_proof,
-                        'public_key_hash': self.public_key_hash,
-                        'proof_hash': self.hash(proof_to_be_hashed)
-                    }
-                    if not self.valid_proof(last_proof, proof):
-                        shares.append(share)
-
-                    if len(shares) >= 500000:
-                        print("collected 500000 shares, now sharing with pool")
-
-
-                        requests.post(f'http://{self.node}/submit', json=shares)
-
-
-
-                        # clear the list storing our generated shares after sharing them
-                        # with the pool or receiving a stale 400 code
-                        print("Share Broadcast Complete")
-                        shares = []
-
-                    if self.valid_proof(last_proof, proof):
-                        print('Proof Found: ', proof)
-                        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-                        requests.post(f'http://{self.node}/submit', json=shares)
-                        shares = []
-                        proof_transaction = {
-                            'proof': proof,
-                            'last_proof': last_proof,
-                            'public_key_hash': self.public_key_hash,
-                            'public_key_hex': self.public_key_hex,
-                            'previous_block_hash': self.get_last_hash()
-                        }
-
-                        proof_signature = self.sign(proof_transaction)
-
-                        proof_transaction_with_sig = {
-                            'proof': proof,
-                            'last_proof': last_proof,
-                            'public_key_hash': self.public_key_hash,
-                            'public_key_hex': self.public_key_hex,
-                            'previous_block_hash': self.get_last_hash(),
-                            'signature': proof_signature
-                        }
-
-                        response = requests.post(f'http://{self.node}/submit/proof', json=proof_transaction_with_sig,
-                                                 headers=headers)
-
-                        if response.status_code == 200:
-                            print('New Block Forged! Proof Accepted ', proof)
-                            time.sleep(5)
-
-                        if response.status_code == 400:
-                            print("stale proof submitted, getting new proof")
-
-
-        if self.mining_mode == 'solo':
-
-            while True:
-                last_proof = self.get_last_proof()
-                proof = self.proof_of_work(last_proof)
-                print("Last Proof: ", last_proof)
-                print("Proof: ", proof)
+                proof = random.randint(1, nonce_upper_limit)
                 if self.valid_proof(last_proof, proof):
                     print('Proof Found: ', proof)
                     headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
@@ -202,11 +153,115 @@ class Miner:
                                              headers=headers)
 
                     if response.status_code == 200:
-                        print('New Block Forged! Proof Accepted ', proof)
+                        print('\nSOLO: New Block Forged! Proof Accepted ', proof)
+                        nonce_upper_limit = 9999999999
+                        start_time = current_time
+                        last_proof = self.get_last_proof()
+                        self.difficulty = self.get_difficulty()
+
+                    if response.status_code == 400:
+                        print("\nSOLO: stale proof submitted, getting new proof")
+                        nonce_upper_limit = 9999999999
+                        start_time = current_time
+                        last_proof = self.get_last_proof()
+                        self.difficulty = self.get_difficulty()
+
+    def pool_mine_loop(self):
+        shares = []
+
+        while True:
+            self.difficulty = self.get_difficulty()
+            last_proof = self.get_last_proof()
+            print(f'Last Proof: {last_proof}\nDifficulty: {self.difficulty}')
+            job_request = requests.get(f'http://{self.node}/getjob')
+            job = job_request.json()
+            lower_limit = job['lower']
+            upper_limit = job['upper']
+            process_id = random.randint(10, 99)
+
+            for proof in tqdm(range(lower_limit, upper_limit), unit="H", unit_scale=1, desc=f"Mining Process ID {process_id}"):
+                proof_to_be_hashed = int(str(last_proof) + str(proof))
+
+                share = {
+                    'proof': proof,
+                    'last_proof': last_proof,
+                    'public_key_hash': self.public_key_hash,
+                    'proof_hash': self.hash(proof_to_be_hashed)
+                }
+
+                shares.append(share)
+                if self.valid_proof(last_proof, proof):
+                    print('Proof Found: ', proof)
+                    headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+                    requests.post(f'http://{self.node}/submit', json=shares)
+                    shares = []
+                    proof_transaction = {
+                        'proof': proof,
+                        'last_proof': last_proof,
+                        'public_key_hash': self.public_key_hash,
+                        'public_key_hex': self.public_key_hex,
+                        'previous_block_hash': self.get_last_hash()
+                    }
+
+                    proof_signature = self.sign(proof_transaction)
+
+                    proof_transaction_with_sig = {
+                        'proof': proof,
+                        'last_proof': last_proof,
+                        'public_key_hash': self.public_key_hash,
+                        'public_key_hex': self.public_key_hex,
+                        'previous_block_hash': self.get_last_hash(),
+                        'signature': proof_signature
+                    }
+
+                    response = requests.post(f'http://{self.node}/submit/proof', json=proof_transaction_with_sig,
+                                             headers=headers)
+
+                    if response.status_code == 200:
+                        print('POOL: New Block Forged! Proof Accepted ', proof)
                         time.sleep(5)
 
                     if response.status_code == 400:
-                        print("stale proof submitted, getting new proof")
+                        print("POOL: stale proof submitted, getting new proof")
+
+
+            print("finished processing job, now sharing with pool")
+
+            requests.post(f'http://{self.node}/submit', json=shares)
+
+            # clear the list storing our generated shares after sharing them
+            # with the pool or receiving a stale 400 code
+            print("Share Broadcast Complete")
+            shares = []
+
+
+
+    def mine(self):
+
+        if self.mining_mode == "pool":
+            processes = []
+            for i in range(int(self.thread_number)):
+                p = Process(target=self.pool_mine_loop)
+                processes.append(p)
+                p.start()
+
+            for p in processes:
+                p.join()
+
+
+
+
+        if self.mining_mode == 'solo':
+
+            processes = []
+            for i in range(int(self.thread_number)):
+                p = Process(target=self.solo_mine_loop)
+                processes.append(p)
+                p.start()
+
+            for p in processes:
+                p.join()
+
 
 
 Miner = Miner()

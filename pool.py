@@ -1,7 +1,9 @@
+import random
 import binascii
 import hashlib
 import json
 from time import time
+from tqdm import tqdm
 import os
 import requests
 from Crypto.Signature import pkcs1_15
@@ -11,6 +13,8 @@ from Crypto.PublicKey import RSA
 import utils
 import logging
 import Validation
+from multiprocessing import Process
+
 
 
 class pool:
@@ -21,14 +25,17 @@ class pool:
 
         # init variables
         self.chain = []
-        self.miners = []
+        self.lower_proof_range = 0
+        self.upper_proof_range = 1000000
+        self.unchecked_range = range(self.lower_proof_range, self.upper_proof_range)
+
         self.share_dict = {}
         self.unpaid_rewards = {}
         self.transactions = []
         self.node_address = input("Please enter the address of a node\n")
         self.port = 6000
         self.unix_time = time()
-
+        self.difficulty = self.get_difficulty()
         # what to do if the directory 'data' is not present, if not present; creates it.
         if not os.path.exists('data'):
             os.makedirs('data')
@@ -36,6 +43,10 @@ class pool:
         # checks to see if there is a chain.json file, if not present; creates it.
         if not os.path.isfile('data/wallet.json'):
             utils.generate_wallet()
+
+
+
+        print(f'current chain difficulty {self.difficulty}')
 
         # attempting to open wallet file
         wallet_file = json.load(open('data/wallet.json', 'r'))
@@ -49,6 +60,14 @@ class pool:
         response = requests.get(f'http://{self.node_address}/chain')
         if response.status_code == 200:
             return response.json()['chain']
+
+    def get_difficulty(self):
+        response = requests.get(f'http://{self.node_address}/difficulty')
+        if response.status_code == 200:
+            return response.json()
+        else:
+            print("couldn't get difficulty")
+
 
     def get_last_block_hash(self):
         response = requests.get(f'http://{self.node_address}/chain')
@@ -171,10 +190,12 @@ class pool:
         :param proof: Current Proof
         :return: True if correct, False if not.
         """
-
+        valid_guess = ""
+        for i in range(pool.difficulty):
+            valid_guess += "0"
         guess = f'{last_proof}{proof}'.encode()
         guess_hash = hashlib.sha256(guess).hexdigest()
-        return guess_hash[:6] == "000000"
+        return guess_hash[:pool.difficulty] == valid_guess
 
     def hash(self, block):
         # We must make sure that the Dictionary is Ordered, or we'll have inconsistent hashes
@@ -241,12 +262,9 @@ class pool:
     def count_shares(self, shares):
         last_proof = self.get_last_proof()
         count = 0
-        for share in shares:
-            proof = share['proof']
-            proof_to_be_hashed = int(str(last_proof) + str(proof))
+        for share in tqdm(shares):
             address = share['public_key_hash']
-
-            if share['proof_hash'] == self.hash(proof_to_be_hashed):
+            if share['last_proof'] == last_proof:
                 if address not in self.share_dict:
                     self.share_dict[address] = 1
                     count += 1
@@ -304,8 +322,21 @@ def forward_chain_request():
     }
     return jsonify(forward), 200
 
+@app.route('/getjob', methods=['GET'])
+def get_job():
+    job = {
+        'lower': pool.lower_proof_range,
+        'upper': pool.upper_proof_range
+    }
+    pool.lower_proof_range = (pool.upper_proof_range + 1)
+    pool.upper_proof_range = (pool.upper_proof_range + 1000000)
+    print(f'Next unchecked range: {pool.lower_proof_range} to {pool.upper_proof_range}')
+    return jsonify(job), 200
 
 
+@app.route('/difficulty', methods=['GET'])
+def difficulty():
+    return jsonify(pool.difficulty), 200
 
 @app.route('/proof', methods=['GET'])
 def last_proof():
@@ -315,9 +346,20 @@ def last_proof():
 
 @app.route('/submit', methods=['POST'])
 def hash_rate_submit():
+    processes = []
+    share_id = random.randint(10, 99)
+    print(f"Received Shares! ID {share_id}")
     values = request.get_json()
-    pool.count_shares(values)
-    return "shares accepted", 200
+
+    p = Process(target=pool.count_shares(values))
+    processes.append(p)
+    p.start()
+
+    for p in processes:
+        p.join()
+        print(f"finished processing Share ID {share_id}")
+        return "shares accepted", 200
+
 
 @app.route('/submit/proof', methods=['POST'])
 def receive_proof():
@@ -335,6 +377,9 @@ def receive_proof():
         return "invalid proof", 400
 
     if proof_valid:
+        #reset search values
+        pool.lower_proof_range = 0
+        pool.upper_proof_range = 1000000
         print("Proof Found!")
         # if proof is valid we will continue to assign variables
         confirming_address = values['public_key_hash']
