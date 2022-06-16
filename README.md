@@ -76,7 +76,7 @@ The code was adapted from the following tutorial and expanded upon.
 Here's why:
 * To expand my coding abilities and tackle new novel problems
 * For fun and to learn how blockchains work by creating my own
-* Something to do in my offtime
+* Something to do in my off time
 
 I hope to make this project the best it can be, and I hope others find it interesting or may wish to contribute. I'm not a professional developer or expert so the code may not be 100% efficient, But I do welcome contributions to the project.
 
@@ -90,7 +90,8 @@ I hope to make this project the best it can be, and I hope others find it intere
 * [Pycryptodome](https://pypi.org/project/pycryptodome/)
 * [Requests](https://pypi.org/project/requests/)
 * [PySimpleGUI](https://pypi.org/project/PySimpleGUI/)
-
+* [tqdm](https://pypi.org/project/tqdm/)
+* [qrcode](https://pypi.org/project/qrcode/)
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
@@ -119,10 +120,15 @@ Install the requirements with
    ```sh
    pip install -r requirements.txt
    ```
-3. Run blockchain.py to generate chain.json and wallet.json.
+3. You may need to install Tkinter as a dependency for PySimpleGUI
+   ```
+   apt install python3-tk
+   ```
+4. Run blockchain.py to generate chain.json and wallet.json.
    ```sh
    python3 blockchain.py
    ```
+
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
@@ -198,6 +204,8 @@ The blockchain will check the hashes of any broadcasted transactions or blocks t
 ### Transaction Broadcast
 Upon receiving and verifying a new transaction nodes will broadcast the transaction to other nodes,
 receiving nodes will check if the transaction is already in their mem-pool, perform their own validation; and either accept or deny the transaction.
+### Difficulty Scaling
+Every 2 blocks the blockchain will either scale mining difficulty up or down to attempt to reach a block time of 10 minutes.
 
 ## miner.py
 This is the miner for the blockchain that will attempt to forge new blocks by solving proofs that output to a defined hash structure; which will solve for the next block. The miner has two modes, solo and pool.
@@ -221,9 +229,17 @@ upon pool.py receiving a valid proof and forging a block, the pool will begin to
 This is the GUI wallet for ease of sending transactions to the blockchain. Simply input the address of the recipient, the amount to send, and hit OK. If you have enough funds, and dont have an existing transaction in the mem-pool; your transaction will be broadcasted to the network and confirmed in the next block.
 ### GUI (wallet.py)
 a simple GUI to send transactions to the blockchain node without having to interact with a terminal.
+
+When The wallet starts it will ask you to enter the address of a node:
+
+![wallet-connect](pictures/wallet-connect.png)
+
+After the wallet has successfully connected to a blockchain node it will display the following. From this interface a user may send transactions or view their transaction history.
+
 ![wallet init](pictures/wallet-init.png)
 ### Transaction History
 view your transaction history within the wallet
+
 ![wallet-transaction-history](pictures/wallet-transaction-history.png)
 
 
@@ -239,7 +255,7 @@ view your transaction history within the wallet
 - [x] Develop Wallet
 - [x] Add pool mining
 - [ ] Improve pool mining efficiency
-- [ ] Implement mining difficulty scaling to ensure consistent block times
+- [x] Implement mining difficulty scaling to ensure consistent block times
 - [ ] Node persistence
     - [ ] implement code to allow for nodes to remember each other after they have been shut down
     - [ ] implement a validation algorithm through signatures to ensure a node is who they say they are
