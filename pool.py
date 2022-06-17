@@ -383,6 +383,7 @@ def hash_rate_submit():
 def receive_proof():
     #table for storing received json
     values = request.get_json()
+    pool.difficulty = pool.get_difficulty()
 
     #variables for storing the proof data
     proof = values['proof']

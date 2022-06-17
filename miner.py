@@ -230,6 +230,8 @@ class Miner:
 
                     if response.status_code == 400:
                         print("POOL: stale proof submitted, getting new proof")
+                        self.difficulty = self.get_difficulty()
+                        last_proof = self.get_last_proof()
 
 
 
