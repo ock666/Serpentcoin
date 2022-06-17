@@ -171,25 +171,32 @@ class Miner:
 
         while True:
             self.difficulty = self.get_difficulty()
+            difficulty = self.difficulty
             last_proof = self.get_last_proof()
             print(f'Last Proof: {last_proof}\nDifficulty: {self.difficulty}')
             job_request = requests.get(f'http://{self.node}/getjob')
             job = job_request.json()
             lower_limit = job['lower']
             upper_limit = job['upper']
+            pool_diff = difficulty - 1
+            valid_share = ""
+            for i in range(pool_diff):
+                valid_share += "0"
             process_id = random.randint(10, 99)
 
             for proof in tqdm(range(lower_limit, upper_limit), unit="H", unit_scale=1, desc=f"Mining Process ID {process_id}"):
                 proof_to_be_hashed = int(str(last_proof) + str(proof))
+                hashed_proof = self.hash(proof_to_be_hashed)
 
-                share = {
-                    'proof': proof,
-                    'last_proof': last_proof,
-                    'public_key_hash': self.public_key_hash,
-                    'proof_hash': self.hash(proof_to_be_hashed)
-                }
+                if hashed_proof[:pool_diff] == valid_share:
+                    share = {
+                        'proof': proof,
+                        'last_proof': last_proof,
+                        'public_key_hash': self.public_key_hash,
+                        'proof_hash': hashed_proof
+                    }
 
-                shares.append(share)
+                    shares.append(share)
                 if self.valid_proof(last_proof, proof):
                     print('Proof Found: ', proof)
                     headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
@@ -225,14 +232,15 @@ class Miner:
                         print("POOL: stale proof submitted, getting new proof")
 
 
-            print("finished processing job, now sharing with pool")
 
-            requests.post(f'http://{self.node}/submit', json=shares)
+            if len(shares) > 1:
+                requests.post(f'http://{self.node}/submit', json=shares)
+                print("finished processing job, now sharing with pool")
 
-            # clear the list storing our generated shares after sharing them
-            # with the pool or receiving a stale 400 code
-            print("Share Broadcast Complete")
-            shares = []
+                # clear the list storing our generated shares after sharing them
+                # with the pool or receiving a stale 400 code
+                print("Share Broadcast Complete")
+                shares = []
 
 
 

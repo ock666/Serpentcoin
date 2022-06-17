@@ -25,14 +25,15 @@ class pool:
 
         # init variables
         self.chain = []
+        self.node_address = input("Please enter the address of a node\n")
         self.lower_proof_range = 0
         self.upper_proof_range = 1000000
         self.unchecked_range = range(self.lower_proof_range, self.upper_proof_range)
-
+        self.current_index = self.get_index()
         self.share_dict = {}
         self.unpaid_rewards = {}
         self.transactions = []
-        self.node_address = input("Please enter the address of a node\n")
+
         self.port = 6000
         self.unix_time = time()
         self.difficulty = self.get_difficulty()
@@ -86,6 +87,10 @@ class pool:
             chain = response.json()['chain']
 
             return chain[length - 1]
+
+    def get_index(self):
+        last_block = self.get_last_block()
+        return last_block['index']
 
     def get_last_proof(self):
         response = requests.get(f'http://{self.node_address}/proof')
@@ -260,17 +265,23 @@ class pool:
     # Share calculations
 
     def count_shares(self, shares):
+        valid_share = ""
+        pool_diff = self.difficulty - 1
         last_proof = self.get_last_proof()
-        count = 0
+
+        for i in range(pool_diff):
+            valid_share += "0"
+
         for share in tqdm(shares):
+            share_hash = share['proof_hash']
             address = share['public_key_hash']
             if share['last_proof'] == last_proof:
-                if address not in self.share_dict:
-                    self.share_dict[address] = 1
-                    count += 1
-                if address in self.share_dict:
-                    self.share_dict[address] += 1
-                    count += 1
+                if share_hash[:pool_diff] == valid_share:
+                    if address not in self.share_dict:
+                        self.share_dict[address] = 1
+                    if address in self.share_dict:
+                        self.share_dict[address] += 1
+
 
 
     def calculate_split(self):
@@ -324,6 +335,11 @@ def forward_chain_request():
 
 @app.route('/getjob', methods=['GET'])
 def get_job():
+    current_index = pool.get_index()
+    if current_index != pool.current_index:
+        pool.current_index = current_index
+        pool.lower_proof_range = 0
+        pool.upper_proof_range = 1000000
     job = {
         'lower': pool.lower_proof_range,
         'upper': pool.upper_proof_range
@@ -331,6 +347,8 @@ def get_job():
     pool.lower_proof_range = (pool.upper_proof_range + 1)
     pool.upper_proof_range = (pool.upper_proof_range + 1000000)
     print(f'Next unchecked range: {pool.lower_proof_range} to {pool.upper_proof_range}')
+
+
     return jsonify(job), 200
 
 
