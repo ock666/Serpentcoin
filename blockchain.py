@@ -528,12 +528,14 @@ def receive_difficulty():
             if blockchain.difficulty - int(value) == 1:
                 blockchain.difficulty = value
                 print(f"new difficulty value: {blockchain.difficulty}")
+                blockchain.broadcast_difficulty()
                 return "ok", 200
 
         if epoch_time < 50000:
             if int(value) - blockchain.difficulty == 1:
                 blockchain.difficulty = value
                 print(f"new difficulty value: {blockchain.difficulty}")
+                blockchain.broadcast_difficulty()
                 return "ok", 200
 
         else:
@@ -761,7 +763,16 @@ def register_nodes():
     for node in nodes:
         blockchain.register_node(node)
         mempool_resp = requests.get(f'{node}/mempool')
-        blockchain.current_transactions = mempool_resp.json()
+        mempool = mempool_resp.json()
+        blockchain.current_transactions = mempool
+
+    blockchain.pending_fees = 0
+
+    for transaction in mempool:
+        blockchain.pending_fees += transaction['fee']
+
+    print(f'got mempool:\n{blockchain.current_transactions}')
+    print(f'pending fees: {blockchain.pending_fees}')
 
     blockchain.get_difficulty()
     blockchain.resolve_conflicts()
