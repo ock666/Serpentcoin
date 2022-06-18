@@ -264,7 +264,7 @@ view your transaction history within the wallet
     - [ ] code clean up, bug fixes, and optimisation
     - [ ] unit test more of the code
 - [x] Transaction Fees
-- [ ] Implement blockchain explorer (WIP) [Explorer](https://github.org/ock666/python-blockchain-explorer)
+- [ ] Implement blockchain explorer (WIP) [Explorer](https://github.com/ock666/python-blockchain-explorer)
     - [ ] develop method to call chain API from a node and enter the values into a database
     - [ ] develop backend to process chain data from database and analyse it
     - [ ] develop frontend for a user to check address and transactions within blocks
