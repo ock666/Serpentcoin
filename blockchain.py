@@ -760,7 +760,7 @@ def register_nodes():
 
     for node in nodes:
         blockchain.register_node(node)
-        mempool_resp = requests.get(f'http://{node}/mempool')
+        mempool_resp = requests.get(f'{node}/mempool')
         blockchain.current_transactions = mempool_resp.json()
 
     blockchain.get_difficulty()
