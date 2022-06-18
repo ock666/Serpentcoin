@@ -204,8 +204,8 @@ The blockchain will check the hashes of any broadcasted transactions or blocks t
 ### Transaction Broadcast
 Upon receiving and verifying a new transaction nodes will broadcast the transaction to other nodes,
 receiving nodes will check if the transaction is already in their mem-pool, perform their own validation; and either accept or deny the transaction.
-### Difficulty Scaling
-Every 2 blocks the blockchain will either scale mining difficulty up or down to attempt to reach a block time of 10 minutes.
+### Difficulty Epoch
+Every 100 blocks the blockchain will either scale mining difficulty up or down to attempt to reach a block time of 10 minutes.
 
 ## miner.py
 This is the miner for the blockchain that will attempt to forge new blocks by solving proofs that output to a defined hash structure; which will solve for the next block. The miner has two modes, solo and pool.
