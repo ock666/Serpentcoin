@@ -519,19 +519,26 @@ def new_transaction():
 @app.route('/diffupdate', methods=['POST'])
 def receive_difficulty():
     value = request.get_json()
-    current_block_time = blockchain.block_time(blockchain.last_block)
-    previous_block_time = blockchain.block_time(blockchain.chain[-2])
-    if current_block_time - previous_block_time > 800:
-        if blockchain.difficulty - int(value) == 1:
-            blockchain.difficulty = value
-            print(f"new difficulty value: {blockchain.difficulty}")
-            return "ok", 200
+    block = blockchain.last_block
+    if block['index'] % 100:
+        epoch_end_time = blockchain.block_time(blockchain.last_block)
+        epoch_begin_time = blockchain.block_time(blockchain.chain[-1])
+        epoch_time = epoch_end_time - epoch_begin_time
+        if epoch_time > 60000:
+            if blockchain.difficulty - int(value) == 1:
+                blockchain.difficulty = value
+                print(f"new difficulty value: {blockchain.difficulty}")
+                return "ok", 200
 
-    if current_block_time - previous_block_time < 500:
-        if int(value) - blockchain.difficulty == 1:
-            blockchain.difficulty = value
-            print(f"new difficulty value: {blockchain.difficulty}")
-            return "ok", 200
+        if epoch_time < 50000:
+            if int(value) - blockchain.difficulty == 1:
+                blockchain.difficulty = value
+                print(f"new difficulty value: {blockchain.difficulty}")
+                return "ok", 200
+
+        else:
+            print('difficulty stable')
+            return "difficulty not accepted by node", 400
 
     else:
         print("Denied Difficulty update")
