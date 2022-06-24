@@ -12,7 +12,7 @@ from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
 from src.utils import Generate
 import logging
-import Validation
+from src.validation import Signature
 from multiprocessing import Process
 
 
@@ -413,7 +413,7 @@ def receive_proof():
             'public_key_hex': public_key_hex,
             'previous_block_hash': previous_hash
         }
-        if Validation.validate_signature(public_key_hex, signature, trans_data):
+        if Signature.validate_signature(public_key_hex, signature, trans_data):
             print("signature valid")
             pool.calculate_split()
             if pool.send_proof(proof=proof, prev_proof=last_proof):
