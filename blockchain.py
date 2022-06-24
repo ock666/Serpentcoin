@@ -518,9 +518,18 @@ def receive_block():
 
     # if all goes as planned we continue
     index = values['index']
+    last_proof = blockchain.last_proof
+    last_block_index = blockchain.last_block['index']
+
+    if not index - last_block_index == 1:
+        print('blocks out of order... resolving')
+        Node.resolve_conflicts()
+        return "out of order", 400
+
+
 
     # call function to validate block
-    if ValidBlock.validate_received_block(values, blockchain.last_proof, blockchain.difficulty):
+    if ValidBlock.validate_received_block(values, last_proof, blockchain.difficulty):
         # if valid we append it to the local chain
         Write.write_chain(values)
         blockchain.chain.append(values)
@@ -532,6 +541,7 @@ def receive_block():
             blockchain.check_epoch_time()
         return "ok", 200
     else:
+        Node.resolve_conflicts()
     # if the function returns False the block is denied.
         return "block broadcast denied", 400
 
