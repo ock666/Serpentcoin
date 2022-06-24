@@ -9,7 +9,7 @@ from Crypto.PublicKey import RSA
 from Crypto.Hash import SHA256
 from Crypto.Hash import RIPEMD160
 from Crypto.Signature import pkcs1_15
-import Validation
+from src.validation import Funds
 import PySimpleGUI as sg
 import hashlib
 
@@ -244,7 +244,7 @@ class Wallet:
     # functions for getting blockchain data
 
     def get_balance(self):
-        chain_balance = Validation.enumerate_funds(self.public_key_hash, self.chain)
+        chain_balance = Funds.enumerate_funds(self.public_key_hash, self.chain)
         if chain_balance > 0:
             return chain_balance
 

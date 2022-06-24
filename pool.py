@@ -10,7 +10,7 @@ from Crypto.Signature import pkcs1_15
 from flask import Flask, jsonify, request
 from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
-import utils
+from src.utils import Generate
 import logging
 import Validation
 from multiprocessing import Process
@@ -43,7 +43,7 @@ class pool:
 
         # checks to see if there is a chain.json file, if not present; creates it.
         if not os.path.isfile('data/wallet.json'):
-            utils.generate_wallet()
+            Generate.generate_wallet()
 
 
 

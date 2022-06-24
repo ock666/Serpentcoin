@@ -1,58 +1,33 @@
-import binascii
-import hashlib
+import os
 import json
 from time import time
-from urllib.parse import urlparse
-import Validation
-import os
-import requests
-from Crypto.Signature import pkcs1_15
-from flask import Flask, jsonify, request
-from Crypto.Hash import SHA256
+from src.utils import Generate, Write, Hash
+from src.validation import Transaction, ValidChain, ValidBlock, Hash_Validation
+from src.epoch import Epoch
+from flask import Flask, request, jsonify
 from Crypto.PublicKey import RSA
-import utils
-import logging
+import requests
+from urllib.parse import urlparse
+from src.broadcast import Broadcast
 
 
 class Blockchain:
     def __init__(self):
-
-        # silence flask console
-        log = logging.getLogger('werkzeug')
-        log.setLevel(logging.ERROR)
-
         # list for storing the chain
         self.chain = []
 
-        # pending transactions waiting to be added to a block
-        self.current_transactions = []
-
-        # set for storing nodes
-        self.nodes = set()
-
-        self.difficulty = 4
-
         # port to run blockchain on
-        self.port = input("Please input port number for chain to run on\n")
+        self.port = input("input a port number: ")
 
-        # total pending fees
-        self.pending_fees = 0
-
-        # what to do if the directory 'data' is not present, if not present; creates it.
         if not os.path.exists('data'):
             print('creating data directory')
             os.makedirs('data')
 
-        # checks to see if there is a chain.json file, if not present; creates it.
+            # checks to see if there is a chain.json file, if not present; creates it.
         if not os.path.isfile('data/wallet.json'):
             print('generating wallet...')
-            utils.generate_wallet()
+            Generate.generate_wallet()
             print('done')
-
-        # checks to see if there is a chain.json file, if not present; creates it.
-        if not os.path.isfile('data/chain.json'):
-            print("now generating genesis block")
-            self.genesis(previous_hash='Times, Chancellor on brink of second bailout for banks', proof=30109)
 
         # attempting to open wallet file
         wallet_file = json.load(open('data/wallet.json', 'r'))
@@ -60,6 +35,10 @@ class Blockchain:
         self.public_key = RSA.import_key(wallet_file['public key'])
         self.public_key_hex = wallet_file['public key hex']
         self.public_key_hash = wallet_file['public key hash']
+
+        if not os.path.isfile('data/chain.json'):
+            print("now generating genesis block")
+            Block.genesis(previous_hash='Times, Chancellor on brink of second bailout for banks', proof=30109)
 
         # attempting to read our json to the self.chain table.
         # dont ask me how this works, as far as I'm concerned its witchcraft
@@ -74,26 +53,78 @@ class Blockchain:
                 print("the json is rekt slut")
                 continue
 
-    def genesis(self, proof, previous_hash=None):
-        # the structure of our block to be filled in
-        unix_time = time()
+        print("Now validating local chain, please wait.")
+        if ValidChain.valid_chain(self.chain):
+            print("Chain is valid")
+        else:
+            print("Local chain is invalid, please sync the node with another upstream node.")
+            print("Local chain is invalid, please sync the node with another upstream node.")
 
+        # current difficulty
+        self.difficulty = self.last_block['difficulty'] or 2
+
+    @property
+    def last_proof(self):
+        """
+        Returns the last proof
+        """
+        return self.last_block['proof']
+
+    @property
+    def last_block(self):
+        """
+        Returns the last block in the chain
+        """
+        return self.chain[-1]
+
+    @property
+    def block_time(self, block):
+        """
+        Returns the timestamp from a given block in unix millis
+        """
+        return block['timestamp']
+
+    @property
+    def last_hash(self):
+        """
+        Returns the hash of the last block in the chain
+        """
+        last_block = self.last_block()
+        return last_block['current_hash']
+
+    def check_epoch_time(self):
+        if not Epoch.evaluate_epoch_difficulty(self.chain):
+            blockchain.difficulty += 1
+            return True
+
+        if Epoch.evaluate_epoch_difficulty(self.chain):
+            blockchain.difficulty -= 1
+            return True
+
+        else:
+            return False
+
+
+class Block:
+    @staticmethod
+    def genesis(proof, previous_hash=None):
+        unix_time = time()
         block = {
-            'index': len(self.chain) + 1,
+            'index': 1,
             'timestamp': unix_time,
-            'transactions': self.current_transactions,
-            'difficulty': self.difficulty,
+            'transactions': [],
+            'difficulty': 4,
             'proof': proof,
             'previous_hash': previous_hash
         }
 
-        block_hash = self.hash(block)
+        block_hash = Hash.hash(block)
 
         block_with_hash = {
-            'index': len(self.chain) + 1,
+            'index': 1,
             'timestamp': unix_time,
-            'transactions': self.current_transactions,
-            'difficulty': self.difficulty,
+            'transactions': [],
+            'difficulty': 4,
             'proof': proof,
             'previous_hash': previous_hash,
             'current_hash': block_hash
@@ -105,68 +136,81 @@ class Blockchain:
             f.write(block_dict)
             f.write('\n')
 
-        return block_with_hash
-
-    def write_json(self, data, filename='data/chain.json'):
-        # opens the file in append mode
-        with open(filename, 'a') as file:
-            block_dict = json.dumps(data)
-            file.write(block_dict)
-            file.write('\n')
-
-    def new_block(self, proof, time, previous_hash=None):
+    @staticmethod
+    def new_block(proof, time, mempool, previous_hash=None):
         block = {
-            'index': len(self.chain) + 1,
+            'index': len(blockchain.chain) + 1,
             'timestamp': time,
-            'transactions': self.current_transactions,
-            'difficulty': self.difficulty,
+            'transactions': mempool,
+            'difficulty': blockchain.difficulty,
             'proof': proof,
             'previous_hash': previous_hash
         }
 
-        block_hash = self.hash(block)
+        block_hash = Hash.hash(block)
 
         block_with_hash = {
-            'index': len(self.chain) + 1,
+            'index': len(blockchain.chain) + 1,
             'timestamp': time,
-            'transactions': self.current_transactions,
-            'difficulty': self.difficulty,
+            'transactions': mempool,
+            'difficulty': blockchain.difficulty,
             'proof': proof,
             'previous_hash': previous_hash,
             'current_hash': block_hash
         }
 
-        # set block time check variables before we append the new block
-        if block['index'] % 100 == 0:
-            epoch_start = self.block_time(self.chain[-99])
-            epoch_end = block['timestamp']
+        Write.write_chain(block_with_hash)
+        blockchain.chain.append(block_with_hash)
+        if block['index'] % Epoch.block_epoch == 0:
+            if blockchain.check_epoch_time():
+                print(f"Difficulty adjusted to {blockchain.difficulty}")
 
-        # function to write the new block to chain.json
-        self.write_json(block_with_hash)
+        # list for storing the failed nodes
+        failed_nodes = []
+        prefix = "http://"
 
-        # broadcast the block to the network
-        self.broadcast_block(block_with_hash)
+        # iterate through nodes to broadcast the new block
+        for neighbour in node.nodes:
+            # Broadcast the block to the registered nodes
+            broadcast_status = Broadcast.broadcast_block(block=block_with_hash, node=neighbour)
 
-        # Reset the current list of transactions
-        self.current_transactions = []
+            # if a node times out or doesnt return a response we will add it to the failed nodes list
+            if broadcast_status == "TimeoutError":
+                failed_nodes.append(neighbour)
 
-        # append the block to the chain list
-        self.chain.append(block_with_hash)
+            # if the broadcast is successful we clear the mempool
+            if broadcast_status:
+                mp.clear_mempool()
 
+            # if the broadcast is rejected we will resolve our chain.
+            if not broadcast_status:
+                Node.resolve_conflicts()
 
-
-        # every 2 blocks the chain will check block time and adjust difficulty accordingly
-        if len(self.chain) % 100 == 0:
-            epoch_time = epoch_end - epoch_start
-            if epoch_time > 60000:
-                self.difficulty_adjust("decrease")
-
-            if epoch_time < 50000:
-                self.difficulty_adjust("increase")
-        else:
-            pass
+        # if the length of the failed node list is greater than zero
+        # we iterate through the list and remove those nodes.
+        if len(failed_nodes) > 0:
+            for neighbour in failed_nodes:
+                address = prefix + neighbour
+                Node.remove_node(address)
 
         return block_with_hash
+
+
+class Mempool:
+    def __init__(self):
+        # pending transactions waiting to be added to a block
+        self.current_transactions = []
+
+        # total pending fees
+        self.pending_fees = 0
+
+    def clear_mempool(self):
+        self.current_transactions = []
+
+    def transaction_in_pool(self, transaction):
+        if transaction in self.current_transactions:
+            return True
+        return False
 
     def new_transaction(self, sender, recipient, amount, fee, unix_time, previous_block_hash, pub_key_hex, trans_hash,
                         signature):
@@ -182,64 +226,129 @@ class Blockchain:
             'signature': signature
         }
 
-        if sender == "Coinbase Reward":
+        if sender == "Coinbase Reward" or sender == "Transaction Fee Reward":
             self.current_transactions.append(trans_data)
 
         else:
             self.current_transactions.append(trans_data)
-            for node in self.nodes:
-                self.broadcast_transaction(trans_data, node)
+            nodes = node.nodes
+            for neighbour in nodes:
+                if Broadcast.broadcast_transaction(trans_data, neighbour):
+                    print("Transaction Broadcast accepted")
 
-        return self.last_block['index'] + 1
+                else:
+                    pass
+        return True
 
+    def new_coinbase_transaction(self, values):
+        confirming_address = values['public_key_hash']
+        public_key_hex = values['public_key_hex']
+        previous_hash = values['previous_block_hash']
+        signature = values['signature']
+        unix_time = time()
 
+        block_reward_transaction = {
+            'sender': 'Coinbase Reward',
+            'recipient': confirming_address,
+            'amount': 10,
+            'fee': 0,
+            'time_submitted': unix_time,
+            'previous_block_hash': previous_hash,
+            'public_key_hex': public_key_hex,
+            'signature': signature
+        }
 
-    @property
-    def last_block(self):
-        """
-        Returns the last block in the chain
-        """
-        return self.chain[-1]
+        hashed_reward = Hash.hash(json.dumps(block_reward_transaction, sort_keys=True))
 
-    def block_time(self, block):
-        """
-        Returns the timestamp from a given block in unix millis
-        """
-        return block['timestamp']
+        full_block_reward_transaction = {
+            'sender': 'Coinbase Reward',
+            'recipient': confirming_address,
+            'amount': 10,
+            'fee': 0,
+            'time_submitted': block_reward_transaction['time_submitted'],
+            'previous_block_hash': previous_hash,
+            'public_key_hex': public_key_hex,
+            'signature': signature,
+            'transaction_hash': hashed_reward
+        }
 
-
-    def last_hash(self):
-        """
-        Returns the hash of the last block in the chain
-        """
-        last_block = self.last_block()
-        return last_block['current_hash']
+        # We must receive a reward for finding the proof.
+        # The sender is "Coinbase" to signify a new block reward has been mined.
+        self.new_transaction(full_block_reward_transaction['sender'],
+                             full_block_reward_transaction['recipient'],
+                             full_block_reward_transaction['amount'],
+                             full_block_reward_transaction['fee'],
+                             full_block_reward_transaction['time_submitted'],
+                             full_block_reward_transaction['previous_block_hash'],
+                             full_block_reward_transaction['public_key_hex'],
+                             full_block_reward_transaction['transaction_hash'],
+                             full_block_reward_transaction['signature'])
 
     @staticmethod
-    def hash(block):
-        """
-        Creates a SHA-256 hash of a Block
-        :param block: Block
-        """
+    def new_fee_reward_transaction(values):
+        confirming_address = values['public_key_hash']
+        public_key_hex = values['public_key_hex']
+        previous_hash = values['previous_block_hash']
+        signature = values['signature']
+        unix_time = time()
+        fees = mp.pending_fees
+        if fees > 0:
+            fee_reward_trans = {
+                'sender': 'Transaction Fee Reward',
+                'recipient': confirming_address,
+                'amount': fees,
+                'fee': 0,
+                'time_submitted': unix_time,
+                'previous_block_hash': previous_hash,
+                'public_key_hex': public_key_hex,
+                'signature': signature
+            }
 
-        # We must make sure that the Dictionary is Ordered, or we'll have inconsistent hashes
-        block_string = json.dumps(block, sort_keys=True).encode()
-        return hashlib.sha256(block_string).hexdigest()
+            hashed_fees = Hash.hash(fee_reward_trans)
 
-    @staticmethod
-    def valid_proof(last_proof, proof):
-        """
-        Validates the Proof
-        :param last_proof: Previous Proof
-        :param proof: Current Proof
-        :return: True if correct, False if not.
-        """
-        valid_guess = ""
-        for i in range(blockchain.difficulty):
-            valid_guess += "0"
-        guess = f'{last_proof}{proof}'.encode()
-        guess_hash = hashlib.sha256(guess).hexdigest()
-        return guess_hash[:blockchain.difficulty] == valid_guess
+            fee_reward_trans_with_hash = {
+                'sender': 'Transaction Fee Reward',
+                'recipient': confirming_address,
+                'amount': fees,
+                'fee': 0,
+                'time_submitted': unix_time,
+                'previous_block_hash': previous_hash,
+                'public_key_hex': public_key_hex,
+                'signature': signature,
+                'transaction_hash': hashed_fees
+            }
+
+            mp.new_transaction(fee_reward_trans_with_hash['sender'],
+                               fee_reward_trans_with_hash['recipient'],
+                               fee_reward_trans_with_hash['amount'],
+                               fee_reward_trans_with_hash['fee'],
+                               fee_reward_trans_with_hash['time_submitted'],
+                               fee_reward_trans_with_hash['previous_block_hash'],
+                               fee_reward_trans_with_hash['public_key_hex'],
+                               fee_reward_trans_with_hash['transaction_hash'],
+                               fee_reward_trans_with_hash['signature'])
+            mp.pending_fees = 0
+
+
+class Node:
+    # set for storing nodes
+    nodes = set()
+
+    def __init__(self):
+
+
+        choice = input("would you like to connect to a node? y/n\n")
+        if choice == "y":
+            prefix = "http://"
+            node_input = input("Please input the address of a node i.e 192.168.0.xxx:xxxx:\n")
+
+            # here we register our first node upon start up
+            self.register_node(str(prefix + node_input))
+
+            # get the blockchain from the registered neighbour
+            self.resolve_conflicts()
+        else:
+            pass
 
     def register_node(self, address):
         """
@@ -249,126 +358,49 @@ class Blockchain:
         """
 
         parsed_url = urlparse(address)
-        self.nodes.add(parsed_url.netloc)
+        Node.nodes.add(parsed_url.netloc)
 
-    def valid_chain(self, chain):
+    @staticmethod
+    def remove_node(address):
         """
-        Determine if a given blockchain is valid
-        :param chain: <list> A blockchain
-        :return: <bool> True if valid, False if not
+        Remove a node from the list of nodes
+        :param address: <str> Address of node. Eg. 'http://192.168.0.5:5000'
+        :return: None
         """
 
-        last_block = chain[0]
+        parsed_url = urlparse(address)
+        Node.nodes.remove(parsed_url.netloc)
 
-        current_index = 1
-
-        while current_index < len(chain):
-
-            # dictionary to store values to confirm appended hash
-            last_block_no_hash = {
-                'index': last_block['index'],
-                'timestamp': last_block['timestamp'],
-                'transactions': last_block['transactions'],
-                'difficulty': last_block['difficulty'],
-                'proof': last_block['proof'],
-                'previous_hash': last_block['previous_hash']
-            }
-
-            block = chain[current_index]
-
-            # Check that the hash of the blocks is consistent
-            if last_block['current_hash'] != block['previous_hash']:
-                print("hashes on chain dont match when syncing... ignored this chain")
-
-                return False
-            # Hash the block ourselves to check for tampering
-            if last_block['current_hash'] != self.hash(last_block_no_hash):
-                print(last_block['current_hash'], " not equal to ", self.hash(last_block_no_hash))
-                return False
-
-            # Check that the Proof of Work is correct
-            if not Validation.validate_chain(last_block['proof'], block['proof'], block['difficulty']):
-                print('invalid proof on block when syncing')
-                return False
-
-            last_block = block
-            current_index += 1
-
-        return True
-
-    def broadcast_difficulty(self):
-        nodes = self.nodes
-        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-        for node in nodes:
-            response = requests.post(f'http://{node}/diffupdate', json=self.difficulty, headers=headers)
-            if response.status_code == 200:
-                print(f'difficulty update accepted by {node}')
-
-    def broadcast_transaction(self, transaction, node):
-        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-        response = requests.post(f'http://{node}/transactions/new', json=transaction, headers=headers)
-        if response.status_code == 201:
-            print('transaction broadcast accepted by: ', node)
-
-        else:
-            print('transaction broadcast denied by: ', node)
-
-    def broadcast_block(self, block):
-        nodes = self.nodes
-        current_time = str(time())
-        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-
-        for node in nodes:
-            response = requests.post(f'http://{node}/broadcast', json=block, headers=headers)
-
-            if response.status_code == 200:
-                print("Block broadcast accepted by ", node, "at ", current_time)
-
-            else:
-                print("Block broadcast denied")
-                self.resolve_conflicts()
-
-    def sign_transaction_data(self, data):
-        transaction_bytes = json.dumps(data, sort_keys=True).encode('utf-8')
-        print(transaction_bytes)
-        hash_object = SHA256.new(transaction_bytes)
-        signature = pkcs1_15.new(self.private_key).sign(hash_object)
-        return signature
-
-    def sign(self, data):
-        signature_hex = binascii.hexlify(self.sign_transaction_data(data)).decode("utf-8")
-
-        return signature_hex
-
-    def resolve_conflicts(self):
+    @staticmethod
+    def resolve_conflicts():
         """
         This is our Consensus Algorithm, it resolves conflicts
         by replacing our chain with the longest one in the network.
         :return: <bool> True if our chain was replaced, False if not
         """
 
-        neighbours = self.nodes
+        neighbours = Node.nodes
         new_chain = None
 
         # We're only looking for chains longer than ours
-        max_length = len(self.chain)
+        max_length = len(blockchain.chain)
 
         # Grab and verify the chains from all the nodes in our network
-        for node in neighbours:
-            response = requests.get(f'http://{node}/chain')
+        for neighbour in neighbours:
+            response = requests.get(f'http://{neighbour}/chain')
 
             if response.status_code == 200:
                 length = response.json()['length']
                 chain = response.json()['chain']
 
                 # Check if the length is longer and the chain is valid
-                if length > max_length and self.valid_chain(chain):
+                if length > max_length and ValidChain.valid_chain(chain):
                     max_length = length
                     new_chain = chain
 
         # Replace our chain if we discovered a new, valid chain longer than ours
         if new_chain:
-            self.chain = new_chain
+            blockchain.chain = new_chain
 
             print("chain updated")
 
@@ -379,7 +411,7 @@ class Blockchain:
                 print("no chain data found... Creating it now.")
 
             with open('data/chain.json', 'w') as f:
-                for i in self.chain:
+                for i in blockchain.chain:
                     string = json.dumps(i)
                     f.write(string)
                     f.write('\n')
@@ -388,339 +420,18 @@ class Blockchain:
 
         return False
 
-    def difficulty_adjust(self, mode):
-        if mode == 'increase':
-            self.difficulty += 1
-
-        if mode == 'decrease':
-            self.difficulty -= 1
-        self.broadcast_difficulty()
-        return print(f'difficulty is now {self.difficulty}')
-
-    def get_difficulty(self):
-        for node in self.nodes:
-            response = requests.get(f'http://{node}/difficulty')
-            self.difficulty = response.json()
-            print(self.difficulty)
-
-
 
 # Instantiate the Node
 app = Flask(__name__)
 
-# Instantiate the Blockchain
+# Instantiate the Blockchain, Node and Mempool classes
+mp = Mempool()
 blockchain = Blockchain()
+node = Node()
+
 
 # Unique address on the chain is a 2 part hash of our public key
 node_identifier = blockchain.public_key_hash
-
-
-@app.route('/transactions/new', methods=['POST'])
-def new_transaction():
-    values = request.get_json()
-
-    # Check that the required fields are in the POST'ed data
-    required = ['sender', 'recipient', 'amount', 'fee', 'time_submitted', 'previous_block_hash', 'public_key_hex',
-                'transaction_hash', 'signature']
-    if not all(k in values for k in required):
-        print('Error 400: Transaction Malformed')
-        return 'Missing values', 400
-
-    # Check that the broadcasted transaction is in the nodes mem-pool already if so return an error and break
-    if Validation.transaction_in_pool(blockchain.current_transactions, values):
-        print('Error 440: Transaction already in this nodes mem-pool')
-        return 'Transaction already in this nodes mem-pool', 440
-
-    # Check if this address already has a transaction in the chain
-    for transaction in blockchain.current_transactions:
-        if transaction['sender'] == values['sender']:
-            print('Error 420: One Transaction per Block')
-            return 'One Transaction per block, wait for next block confirmation', 420
-
-    # Check if the sender is trying to send themselves coins to the same address, this is not allowed
-    if values['sender'] == values['recipient']:
-        return "You cant send a transaction to yourself", 430
-
-    # check if the minimum fee has been paid
-    if values['fee'] < .05:
-        return "Please send transaction with minimum fee of .05", 410
-
-    # If all checks clear continue validation
-    print("New transaction: ", values, "\n...Validating...")
-
-    # Format for transaction data for hash verification
-    trans_to_be_hashed = {
-        'sender': values['sender'],
-        'recipient': values['recipient'],
-        'amount': values['amount'],
-        'fee': values['fee'],
-        'time_submitted': values['time_submitted'],
-        'previous_block_hash': values['previous_block_hash'],
-        'public_key_hex': values['public_key_hex']
-    }
-
-    # Check the local hash matches what has been provided
-    # If this fails the transaction has been tampered with or a transmission error has occured
-    local_trans_hash = blockchain.hash(trans_to_be_hashed)
-
-    # If the transaction fails hash verification we throw it out and return an error
-    if local_trans_hash != values['transaction_hash']:
-        print("Transaction hash mismatch")
-        response = {'message': f'Transaction hash failed CRC'}
-        return response, 450
-
-    # If the Hash is correct we proceed
-    else:
-        print("Transaction Hash verified!")
-
-    # Format of transaction data for signature verification
-    trans_to_be_validated = {
-        'sender': values['sender'],
-        'recipient': values['recipient'],
-        'amount': values['amount'],
-        'fee': values['fee'],
-        'time_submitted': values['time_submitted'],
-        'previous_block_hash': values['previous_block_hash'],
-        'public_key_hex': values['public_key_hex'],
-        'transaction_hash': values['transaction_hash']
-    }
-
-    # This line checks the signature against the broadcasted data If true we proceed
-    # If not we throw out the transaction as it has been tampered with
-    if Validation.validate_signature(values['public_key_hex'], values['signature'], trans_to_be_validated):
-
-        # Check if funds are available for the given address, or if the transaction is a Coinbase Reward
-        if values['sender'] == 'Coinbase Reward' or Validation.enumerate_funds(
-                values['sender'], blockchain.chain) >= values['amount']:
-            print('funds are available')
-
-            # Create a new Transaction in the mempool to await confirmation
-            index = blockchain.new_transaction(values['sender'], values['recipient'], values['amount'], values['fee'],
-                                               values['time_submitted'], values['previous_block_hash'],
-                                               values['public_key_hex'], values['transaction_hash'],
-                                               values['signature'])
-
-            # add the fee to pending fees
-            blockchain.pending_fees += values['fee']
-
-            print(f'Transaction will be added to Block {index}')
-            response = {'message': f'Transaction will be added to Block {index}'}
-            return jsonify(response), 201
-
-        # If theres not enough funds we throw an error and discard the transaction
-        else:
-            response = {'message': f'Not enough funds for transaction'}
-            return jsonify(response), 220
-    # If the signature fails verification we throw out the transaction and throw an error
-    else:
-        response = {'message': f'Transaction signature not valid'}
-        return jsonify(response), 460
-
-@app.route('/diffupdate', methods=['POST'])
-def receive_difficulty():
-    value = request.get_json()
-    block = blockchain.last_block
-    if block['index'] % 100:
-        epoch_end_time = blockchain.block_time(blockchain.last_block)
-        epoch_begin_time = blockchain.block_time(blockchain.chain[-1])
-        epoch_time = epoch_end_time - epoch_begin_time
-        if epoch_time > 60000:
-            if blockchain.difficulty - int(value) == 1:
-                blockchain.difficulty = value
-                print(f"new difficulty value: {blockchain.difficulty}")
-                blockchain.broadcast_difficulty()
-                return "ok", 200
-
-        if epoch_time < 50000:
-            if int(value) - blockchain.difficulty == 1:
-                blockchain.difficulty = value
-                print(f"new difficulty value: {blockchain.difficulty}")
-                blockchain.broadcast_difficulty()
-                return "ok", 200
-
-        else:
-            print('difficulty stable')
-            return "difficulty not accepted by node", 400
-
-    else:
-        print("Denied Difficulty update")
-        return "difficulty not accepted by node", 400
-
-
-
-@app.route('/miners', methods=['POST'])
-def receive_proof():
-    # table for storing received json
-    values = request.get_json()
-
-    # variables for storing the transaction data
-    proof = values['proof']
-    last_proof = blockchain.last_block['proof']
-
-    # check to see if the proof is valid
-    proof_valid = blockchain.valid_proof(last_proof, proof)
-
-    if not proof_valid:
-        return "invalid proof", 400
-
-    # If the proof is valid we will proceed
-    if proof_valid:
-        print("Valid Proof Submitted...\n")
-        # if proof is valid we will continue to assign variables
-        confirming_address = values['public_key_hash']
-        public_key_hex = values['public_key_hex']
-        previous_hash = values['previous_block_hash']
-        signature = values['signature']
-        unix_time = time()
-
-        # Format of proof data to be verified
-        trans_data = {
-            'proof': proof,
-            'last_proof': last_proof,
-            'public_key_hash': confirming_address,
-            'public_key_hex': public_key_hex,
-            'previous_block_hash': previous_hash
-        }
-        # If the signature is verified we will proceed with creating a block
-        if Validation.validate_signature(public_key_hex, signature, trans_data):
-            print('Signature valid! proceeding...\n')
-            block_reward_transaction = {
-                'sender': 'Coinbase Reward',
-                'recipient': confirming_address,
-                'amount': 10,
-                'fee': 0,
-                'time_submitted': unix_time,
-                'previous_block_hash': previous_hash,
-                'public_key_hex': public_key_hex,
-                'signature': signature
-            }
-
-            hashed_reward = blockchain.hash(json.dumps(block_reward_transaction, sort_keys=True))
-
-            full_block_reward_transaction = {
-                'sender': 'Coinbase Reward',
-                'recipient': confirming_address,
-                'amount': 10,
-                'fee': 0,
-                'time_submitted': block_reward_transaction['time_submitted'],
-                'previous_block_hash': previous_hash,
-                'public_key_hex': blockchain.public_key_hex,
-                'signature': signature,
-                'transaction_hash': hashed_reward
-            }
-
-            # We must receive a reward for finding the proof.
-            # The sender is "Coinbase" to signify a new block reward has been mined.
-            blockchain.new_transaction(full_block_reward_transaction['sender'],
-                                       full_block_reward_transaction['recipient'],
-                                       full_block_reward_transaction['amount'],
-                                       full_block_reward_transaction['fee'],
-                                       full_block_reward_transaction['time_submitted'],
-                                       full_block_reward_transaction['previous_block_hash'],
-                                       full_block_reward_transaction['public_key_hex'],
-                                       full_block_reward_transaction['transaction_hash'],
-                                       full_block_reward_transaction['signature'])
-
-            # If there are pending fees create a transaction to award fees to miner
-            if blockchain.pending_fees > 0:
-                fee_reward_trans = {
-                    'sender': 'Transaction Fee Reward',
-                    'recipient': confirming_address,
-                    'amount': blockchain.pending_fees,
-                    'fee': 0,
-                    'time_submitted': block_reward_transaction['time_submitted'],
-                    'previous_block_hash': previous_hash,
-                    'public_key_hex': blockchain.public_key_hex,
-                }
-                signed_fees = blockchain.sign(fee_reward_trans)
-
-                fee_reward_trans_with_sig = {
-                    'sender': 'Transaction Fee Reward',
-                    'recipient': confirming_address,
-                    'amount': blockchain.pending_fees,
-                    'fee': 0,
-                    'time_submitted': block_reward_transaction['time_submitted'],
-                    'previous_block_hash': previous_hash,
-                    'public_key_hex': blockchain.public_key_hex,
-                    'signature': signed_fees,
-                }
-
-                hashed_fees = blockchain.hash(fee_reward_trans_with_sig)
-
-                fee_reward_trans_with_hash = {
-                    'sender': 'Transaction Fee Reward',
-                    'recipient': confirming_address,
-                    'amount': blockchain.pending_fees,
-                    'fee': 0,
-                    'time_submitted': block_reward_transaction['time_submitted'],
-                    'previous_block_hash': previous_hash,
-                    'public_key_hex': blockchain.public_key_hex,
-                    'signature': signed_fees,
-                    'transaction_hash': hashed_fees
-                }
-
-                blockchain.new_transaction(fee_reward_trans_with_hash['sender'],
-                                           fee_reward_trans_with_hash['recipient'],
-                                           fee_reward_trans_with_hash['amount'],
-                                           fee_reward_trans_with_hash['fee'],
-                                           fee_reward_trans_with_hash['time_submitted'],
-                                           fee_reward_trans_with_hash['previous_block_hash'],
-                                           fee_reward_trans_with_hash['public_key_hex'],
-                                           fee_reward_trans_with_hash['transaction_hash'],
-                                           fee_reward_trans_with_hash['signature'])
-
-                blockchain.pending_fees = 0
-
-                # Forge the new Block by adding it to the chain
-            block = blockchain.new_block(proof, unix_time, previous_hash)
-            print("New block forged at: ", unix_time, " by ", confirming_address)
-            return block, 200
-        # If signature fails validation we discard the proof/block
-        if not Validation.validate_signature(public_key_hex, signature, trans_data):
-            print('signature failed verification')
-            return "signature malformed", 400
-
-
-@app.route('/nodes', methods=['GET'])
-def all_nodes():
-    response = {
-        'message': 'all nodes',
-        'total_nodes': list(blockchain.nodes),
-    }
-    return jsonify(response), 200
-
-
-@app.route('/broadcast', methods=['POST'])
-def receive_block():
-    values = request.get_json()
-    last_proof = blockchain.last_block['proof']
-    new_proof = values['proof']
-
-    block_confirmed = Validation.validate_chain(last_proof, new_proof, blockchain.difficulty)
-
-    if block_confirmed:
-        print('new block added to chain: ', values)
-        blockchain.write_json(values)
-        blockchain.chain.append(values)
-        response = {
-            'message': 'new block added to chain',
-            'block': values,
-        }
-        # clears the current transaction table, i'll just call it the mem-pool even though is isnt a proper one
-        blockchain.current_transactions = []
-        print('transactions in mem-pool cleared')
-        blockchain.pending_fees = 0
-        print(blockchain.current_transactions)
-        return jsonify(response), 200
-
-    if not block_confirmed:
-        print("block proof not valid")
-        blockchain.resolve_conflicts()
-        response = {
-            'message': 'block has invalid proof, skipping...',
-            'block': values,
-        }
-        return jsonify(response), 400
 
 
 @app.route('/difficulty', methods=['GET'])
@@ -730,7 +441,7 @@ def difficulty():
 
 @app.route('/mempool', methods=['GET'])
 def mempool():
-    return jsonify(blockchain.current_transactions), 200
+    return jsonify(mp.current_transactions), 200
 
 
 @app.route('/proof', methods=['GET'])
@@ -749,44 +460,138 @@ def full_chain():
     return jsonify(response), 200
 
 
+@app.route('/transactions/new', methods=['POST'])
+def new_transaction():
+    values = request.get_json()
+
+    required = ['sender', 'recipient', 'amount', 'fee', 'time_submitted', 'previous_block_hash', 'public_key_hex',
+                'transaction_hash', 'signature']
+
+    # Check that the required fields are in the POST'ed data
+    if not all(k in values for k in required):
+        print('Error 400: Transaction Malformed')
+        return 'Missing values', 400
+
+        # Check if this address already has a transaction in the chain
+    for transaction in mp.current_transactions:
+        if transaction['sender'] == values['sender']:
+            print('Error 420: One Transaction per Block')
+            return 'One Transaction per block, wait for next block confirmation', 420
+
+        # Validates the public_key_hash also known as the address.
+    if not Hash_Validation.validate_pubkey_hash(pubkey=values['public_key_hex'], provided_pubkey_hash=values['sender']):
+        print('Error 480: provided address does not match locally hashed result of provided public key')
+        return "Error 490", 490
+
+        # Check if the sender is trying to send themselves coins to the same address, this is not allowed
+    if values['sender'] == values['recipient']:
+        return "You cant send a transaction to yourself", 430
+
+        # check if the minimum fee has been paid
+    if values['fee'] < .0005:
+        return "Please send transaction with minimum fee of .0005", 410
+
+    if not mp.transaction_in_pool(values):
+        if Transaction.verify_transaction(values=values, chain=blockchain.chain):
+            # Create a new Transaction in the mempool to await confirmation
+            if mp.new_transaction(values['sender'], values['recipient'], values['amount'],
+                                  values['fee'],
+                                  values['time_submitted'], values['previous_block_hash'],
+                                  values['public_key_hex'], values['transaction_hash'],
+                                  values['signature']):
+                mp.pending_fees += values['fee']
+                return "ok", 201
+
+
+@app.route('/broadcast', methods=['POST'])
+def receive_block():
+    values = request.get_json()
+    # check all the block info has been submitted
+    required = ['index', 'timestamp', 'transactions', 'difficulty', 'proof', 'previous_hash', 'current_hash']
+    if not all(k in values for k in required):
+        # if not we return an error so the sending node can do something
+        return "block broadcast denied", 400
+
+    # if all goes as planned we continue
+    index = values['index']
+
+    # call function to validate block
+    if ValidBlock.validate_received_block(values, blockchain.last_proof, blockchain.difficulty):
+        # if valid we append it to the local chain
+        Write.write_chain(values)
+        blockchain.chain.append(values)
+        # and clear the mempool
+        mp.clear_mempool()
+        # check to see if the block index is the beginning of a new epoch to do difficulty calculations
+        if index % 100 == 0:
+            blockchain.check_epoch_time()
+        return "ok", 200
+    else:
+    # if the function returns False the block is denied.
+        return "block broadcast denied", 400
+
+
+@app.route('/miners', methods=['POST'])
+def receive_proof():
+    # table for storing received json
+    values = request.get_json()
+    unix_time = time()
+
+    submitted_last_proof = values['last_proof']
+    last_proof = blockchain.last_block['proof']
+
+    if submitted_last_proof == last_proof:
+        if Transaction.verify_proof_transaction(values=values, last_proof=last_proof, difficulty=blockchain.difficulty):
+            proof = values['proof']
+            previous_block_hash = values['previous_block_hash']
+            mp.new_coinbase_transaction(values=values)
+            if mp.pending_fees > 0:
+                mp.new_fee_reward_transaction(values=values)
+            Block.new_block(proof=proof, time=unix_time, mempool=mp.current_transactions,
+                            previous_hash=previous_block_hash)
+            mp.clear_mempool()
+            return "proof accepted", 200
+    return "stale proof", 400
+
+
 @app.route('/nodes/register', methods=['POST'])
 def register_nodes():
     values = request.get_json()
     nodes = values.get('nodes')
-    for node in nodes:
-        if node in blockchain.nodes:
+    for neighbour in nodes:
+        if neighbour in node.nodes:
             return "Error: Node already registered", 400
 
     if nodes is None:
         return "Error: Please supply a valid list of nodes", 400
 
-    for node in nodes:
-        blockchain.register_node(node)
-        mempool_resp = requests.get(f'{node}/mempool')
-        mempool = mempool_resp.json()
-        blockchain.current_transactions = mempool
+    for neighbour in nodes:
+        node.register_node(neighbour)
+        mempool_resp = requests.get(f'{neighbour}/mempool')
+        current_mempool = mempool_resp.json()
+        mp.current_transactions = current_mempool
+        blockchain.difficulty = Epoch.get_difficulty(neighbour)
 
-    blockchain.pending_fees = 0
+    mp.pending_fees = 0
 
-    for transaction in mempool:
-        blockchain.pending_fees += transaction['fee']
+    for transaction in mp.current_transactions:
+        mp.pending_fees += transaction['fee']
 
-    print(f'got mempool:\n{blockchain.current_transactions}')
-    print(f'pending fees: {blockchain.pending_fees}')
+    print(f'got mempool:\n{mp.current_transactions}')
+    print(f'pending fees: {mp.pending_fees}')
 
-    blockchain.get_difficulty()
-    blockchain.resolve_conflicts()
+    node.resolve_conflicts()
 
     response = {
         'message': 'New nodes have been added',
-        'total_nodes': list(blockchain.nodes),
+        'total_nodes': list(node.nodes),
     }
     return jsonify(response), 201
 
 
 @app.route('/nodes/resolve', methods=['GET'])
 def consensus():
-    replaced = blockchain.resolve_conflicts()
+    replaced = node.resolve_conflicts()
 
     if replaced:
         response = {
@@ -799,6 +604,15 @@ def consensus():
             'chain': blockchain.chain
         }
 
+    return jsonify(response), 200
+
+
+@app.route('/nodes', methods=['GET'])
+def all_nodes():
+    response = {
+        'message': 'all nodes',
+        'total_nodes': list(node.nodes),
+    }
     return jsonify(response), 200
 
 
