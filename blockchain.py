@@ -540,9 +540,9 @@ def receive_block():
         if index % 100 == 0:
             blockchain.check_epoch_time()
 
-            # list for storing the failed nodes
-            failed_nodes = []
-            prefix = "http://"
+        # list for storing the failed nodes
+        failed_nodes = []
+        prefix = "http://"
 
         # iterate through nodes to broadcast the new block
         for neighbour in node.nodes:
