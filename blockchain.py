@@ -181,6 +181,7 @@ class Block:
             # if the broadcast is successful we clear the mempool
             if broadcast_status:
                 mp.clear_mempool()
+                mp.clear_fees()
 
             # if the broadcast is rejected we will resolve our chain.
             if not broadcast_status:
@@ -206,6 +207,9 @@ class Mempool:
 
     def clear_mempool(self):
         self.current_transactions = []
+
+    def clear_fees(self):
+        self.pending_fees = 0
 
     def transaction_in_pool(self, transaction):
         if transaction in self.current_transactions:
@@ -522,6 +526,7 @@ def receive_block():
         blockchain.chain.append(values)
         # and clear the mempool
         mp.clear_mempool()
+        mp.clear_fees()
         # check to see if the block index is the beginning of a new epoch to do difficulty calculations
         if index % 100 == 0:
             blockchain.check_epoch_time()
