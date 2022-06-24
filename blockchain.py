@@ -539,6 +539,32 @@ def receive_block():
         # check to see if the block index is the beginning of a new epoch to do difficulty calculations
         if index % 100 == 0:
             blockchain.check_epoch_time()
+
+            # list for storing the failed nodes
+            failed_nodes = []
+            prefix = "http://"
+
+        # iterate through nodes to broadcast the new block
+        for neighbour in node.nodes:
+            # Broadcast the block to the registered nodes
+            broadcast_status = Broadcast.broadcast_block(block=values, node=neighbour)
+
+            # if a node times out or doesnt return a response we will add it to the failed nodes list
+            if broadcast_status == "TimeoutError":
+                failed_nodes.append(neighbour)
+
+
+            # if the broadcast is rejected we will resolve our chain.
+            if not broadcast_status:
+                Node.resolve_conflicts()
+
+            # if the length of the failed node list is greater than zero
+            # we iterate through the list and remove those nodes.
+            if len(failed_nodes) > 0:
+                for neighbour in failed_nodes:
+                    address = prefix + neighbour
+                    Node.remove_node(address)
+
         return "ok", 200
     else:
         Node.resolve_conflicts()
