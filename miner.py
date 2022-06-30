@@ -4,7 +4,7 @@ import binascii
 import requests
 import os
 import json
-import utils
+from src.utils import Generate
 from Crypto.PublicKey import RSA
 import random
 from Crypto.Signature import pkcs1_15
@@ -21,7 +21,7 @@ class Miner:
         self.difficulty = self.get_difficulty()
 
         if not os.path.isfile('data/wallet.json'):
-            utils.generate_wallet()
+            Generate.generate_wallet()
 
         wallet_file = json.load(open('data/wallet.json', 'r'))
         self.private_key = RSA.import_key(wallet_file['private key'])

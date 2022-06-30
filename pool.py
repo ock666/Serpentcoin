@@ -10,9 +10,9 @@ from Crypto.Signature import pkcs1_15
 from flask import Flask, jsonify, request
 from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
-import utils
+from src.utils import Generate
 import logging
-import Validation
+from src.validation import Signature
 from multiprocessing import Process
 
 
@@ -43,7 +43,7 @@ class pool:
 
         # checks to see if there is a chain.json file, if not present; creates it.
         if not os.path.isfile('data/wallet.json'):
-            utils.generate_wallet()
+            Generate.generate_wallet()
 
 
 
@@ -413,7 +413,7 @@ def receive_proof():
             'public_key_hex': public_key_hex,
             'previous_block_hash': previous_hash
         }
-        if Validation.validate_signature(public_key_hex, signature, trans_data):
+        if Signature.validate_signature(public_key_hex, signature, trans_data):
             print("signature valid")
             pool.calculate_split()
             if pool.send_proof(proof=proof, prev_proof=last_proof):
