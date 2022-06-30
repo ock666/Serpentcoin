@@ -23,7 +23,7 @@ class Blockchain:
             print('creating data directory')
             os.makedirs('data')
 
-            # checks to see if there is a chain.json file, if not present; creates it.
+        # checks to see if there is a chain.json file, if not present; creates it.
         if not os.path.isfile('data/wallet.json'):
             print('generating wallet...')
             Generate.generate_wallet()
@@ -36,6 +36,7 @@ class Blockchain:
         self.public_key_hex = wallet_file['public key hex']
         self.public_key_hash = wallet_file['public key hash']
 
+        # if no chain exists, forges a genesis block
         if not os.path.isfile('data/chain.json'):
             print("now generating genesis block")
             Block.genesis(previous_hash='Times, Chancellor on brink of second bailout for banks', proof=30109)
@@ -58,10 +59,9 @@ class Blockchain:
             print("Chain is valid")
         else:
             print("Local chain is invalid, please sync the node with another upstream node.")
-            print("Local chain is invalid, please sync the node with another upstream node.")
 
         # current difficulty
-        self.difficulty = self.last_block['difficulty'] or 2
+        self.difficulty = self.last_block['difficulty'] or 5
 
     @property
     def last_proof(self):
