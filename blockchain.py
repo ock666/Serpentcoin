@@ -4,7 +4,7 @@ import json
 from Crypto.PublicKey import RSA
 from flask import Flask, request, jsonify
 from urllib.parse import urlparse
-from src.validation import Transaction, ValidChain, ValidBlock, Hash_Validation
+from src.validation import Transaction, ValidChain, ValidBlock, Hash_Validation, Funds
 from src.utilities import Write, Generate
 from src.broadcast import Broadcast
 from src.epoch import Epoch
@@ -481,6 +481,32 @@ def receive_block():
 def difficulty():
     return jsonify(diff.level)
 
+
+@app.route('/balance', methods=['GET'])
+def balance():
+    address = request.args.get('address')
+
+    if address is None:
+        return 'Missing address', 400
+
+    if len(address) < 40 or len(address) > 40:
+        return 'Invalid address', 400
+
+    bal = Funds.enumerate_funds(address, blockchain.chain)
+
+    if bal >= 0:
+        response = {
+            'address': address,
+            'balance': bal,
+        }
+        return jsonify(response), 200
+
+    # If balance is false, the address no found on blockchain
+    if not bal:
+        response = {
+            'message': 'address not found',
+        }
+        return jsonify(response), 400
 
 @app.route('/transactions/new', methods=['POST'])
 def receive_transaction():

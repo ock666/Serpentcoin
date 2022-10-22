@@ -228,7 +228,7 @@ view your transaction history within the wallet
 - [x] Add signature and hash validation
 - [x] Add Balance Verification
 - [x] Develop Wallet
-- [ ] Improved difficulty algorithm; doesnt scale so aggressively anymore.
+- [X] Improved difficulty algorithm; doesnt scale so aggressively anymore.
 - [ ] Add pool mining - Removed as of Alpha 0.0.1, will be readded upon improvement
   - [ ] Improve pool mining efficiency
 - [x] Implement mining difficulty scaling to ensure consistent block times
