@@ -39,13 +39,27 @@ class Broadcast:
         current_time = str(time())
         headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
         try:
-            response = requests.post(f'http://{node}/broadcast', json=block, headers=headers)
+            response = requests.post(f'http://{node}/block', json=block, headers=headers)
 
             if response.status_code == 200:
                 print("Block broadcast accepted by ", node, "at ", current_time)
+                return True
 
-            else:
-                return False, print("block not accepted")
+            if response.status_code == 201:
+                print("Block broadcast already received by ", node)
+                return "Block Received"
+
+            if response.status_code == 400:
+                print("block malformed")
+                return "Block Malformed"
+
+            if response.status_code == 500:
+                print("block out of order")
+                return "Block Out Of Order"
+
+            if response.status_code == 600:
+                print("block invalid")
+                return "Block Invalid"
 
         except:
             return "TimeoutError"
