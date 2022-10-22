@@ -4,9 +4,9 @@ class Epoch:
     """
     variables to store the epoch info
     """
-    block_epoch = 100
-    target_time = 60000
-    allowed_variance = 20000
+    block_epoch = 10
+    target_time = 300
+    allowed_variance = 50
 
     def epoch_variance(self, epoch_time):
         if epoch_time > Epoch.target_time:
@@ -48,7 +48,7 @@ class Epoch:
         Get the block time from (current block index - 100)
         returns the beginning time of an epoch
         """
-        start_time = self.block_time(chain[-100])
+        start_time = self.block_time(chain[-10])
         print(f'Epoch Start: {start_time}')
         return start_time
 
@@ -109,15 +109,17 @@ class Epoch:
                 # if an epoch time is greater than the target time + allowed variance
                 # return True to decrease the chain difficulty
                 if epoch_time > (target_time + variance):
-                    return True
+                    return "Decrease"
 
                 # if an epoch time is less than the target time - allowed variance
                 # return False to reduce chain difficulty
                 if epoch_time < (target_time - variance):
-                    return False
+                    return "Increase"
 
-                return 'difficulty stable'
-            return "Epoch not complete"
+                else:
+                    return "Stable"
+            else:
+                return "Epoch not complete"
         except:
             pass
             return "Error occured"

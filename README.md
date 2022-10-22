@@ -12,22 +12,22 @@
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
-  <a href="https://github.com/ock666/python-blockchain">
+  <a href="https://github.com/ock666/serpentcoin">
     <img src="pictures/logo.png" alt="Logo" width="300" height="200">
   </a>
 
-  <h3 align="center">Python Blockchain</h3>
+  <h3 align="center">Serpentcoin</h3>
 
   <p align="center">
-    A blockchain coded in python
+    Version Alpha 0.0.1
     <br />
-    <a href="https://github.com/ock666/python-blockchain"><strong>Explore the docs »</strong></a>
+    <a href="https://github.com/ock666/serpentcoin"><strong>Explore the docs »</strong></a>
     <br />
     <br />
     ·
-    <a href="https://github.com/ock666/python-blockchain/issues">Report Bug</a>
+    <a href="https://github.com/ock666/serpentcoin/issues">Report Bug</a>
     ·
-    <a href="https://github.com/ock666/python-blockchain/issues">Request Feature</a>
+    <a href="https://github.com/ock666/serpentcoin/issues">Request Feature</a>
   </p>
 </div>
 
@@ -90,7 +90,6 @@ I hope to make this project the best it can be, and I hope others find it intere
 * [Pycryptodome](https://pypi.org/project/pycryptodome/)
 * [Requests](https://pypi.org/project/requests/)
 * [PySimpleGUI](https://pypi.org/project/PySimpleGUI/)
-* [tqdm](https://pypi.org/project/tqdm/)
 * [qrcode](https://pypi.org/project/qrcode/)
 
 <p align="right">(<a href="#top">back to top</a>)</p>
@@ -114,7 +113,7 @@ Install the requirements with
 
 1. Clone the repo
    ```sh
-   git clone https://github.com/ock666/python-blockchain.git
+   git clone https://github.com/ock666/serpentcoin.git
    ```
 2. Install the requirements
    ```sh
@@ -124,7 +123,11 @@ Install the requirements with
    ```
    apt install python3-tk
    ```
-4. Run blockchain.py to generate chain.json and wallet.json.
+4. If you receive an error stating python cannot import Image, you may also need to install Pillow as a dependency for qrcode. 
+    ```shell
+    pip3 -U install Pillow
+    ```
+5. Run blockchain.py to generate chain.json and wallet.json.
    ```sh
    python3 blockchain.py
    ```
@@ -141,19 +144,12 @@ Install the requirements with
 ```
 python3 blockchain.py
 ```
-* If a node already exists call the /nodes/register API on the new node the receive the chain (explained further below in the readme).
-* Call the /nodes/register API on the existing node to tell it about the new blockchain.py node so that any blocks confirmed by each node can be shared.
-* Start pool.py and connect it to the IP and port number of a blockchain.py node, pool.py will always run on port 6000.
-```
-python3 pool.py
-```
-* To begin mining, start miner.py and select the mode.
+* If a node already exists, upon start up you can connect to nodes configured in the data/config.json file to receive the chain and mempool from upstream.
+* To begin mining, start miner.py and enter the IP address of a node.
 ```
 python3 miner.py
 ```
-* If you are solo mining you should connect miner.py directly to the blockchain node to receive proofs for example 192.168.0.25:5000.
-* if you are pool mining you should connect miner.py to the pool.py node, and specify port 6000 for example 192.168.0.20:6000.
-* Miners will now be attempting to solve proofs either through a pool or solo.
+* Miners will now attempt to forge new blocks.
 * Congrats! the blockchain network is now set up!
 * Upon miners receiving rewards, wallet.py can be used to send coins to other addresses on the network.
 * any transactions sent from the wallet.py or pool.py will confirm in the next block.
@@ -175,12 +171,6 @@ The blockchain can be interacted with using either Postman or simple cURL comman
 2. Register a new node /nodes/register 			// POST
 ``````
 ![syntax for node registration](pictures/postman-node-register.png)
-``````````
-3. Resolve/update node chain data /nodes/resolve 			\\ GET
-``````````
-![postman resolve node chain](pictures/postman-resolve-node.png)
-
-Nodes will also resolve their chain when registering a new node.
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
@@ -205,25 +195,10 @@ The blockchain will check the hashes of any broadcasted transactions or blocks t
 Upon receiving and verifying a new transaction nodes will broadcast the transaction to other nodes,
 receiving nodes will check if the transaction is already in their mem-pool, perform their own validation; and either accept or deny the transaction.
 ### Difficulty Epoch
-Every 100 blocks the blockchain will either scale mining difficulty up or down to attempt to reach a block time of 10 minutes.
+Every 10 blocks the blockchain will either scale mining difficulty up or down to attempt to reach an epoch time of 5 minutes.
 
 ## miner.py
 This is the miner for the blockchain that will attempt to forge new blocks by solving proofs that output to a defined hash structure; which will solve for the next block. The miner has two modes, solo and pool.
-### Solo Mining
-In this mode the miner will connect directly to the blockchain node to obtain the last blocks proof, and attempt to compute what the next proof is.
-Note: currently when solo mining, a miner will not see an update in the last proof until it has finished finding a correct proof.
-### Pool Mining
-miner.py will pool together hashes with other miners, upon a miner finding a valid proof it will submit the proof to the pool, and each miner will receive a share of the coinbase reward.
-Note: currently pool mode is must slower at solving blocks than solo mode, this is a known issue/limitation of the code currently.
-
-
-## pool.py
-This is the pool node which miners configured to pool mode will connect to. pool.py verifies all submitted tested proofs from miners and tallys the total number submitted by each miner. After a block is solved, will calculate each miners share of the coinbase reward from the amount of valid shares they submitted in that given block time. Once a miner reachs 100 coins they will be eligible for a payout. Once per block the pool will submit 1 payout transaction to a miner with over 100 coins in unpaid reward balance, this transaction should confirm in the next block.
-### Share verification
-pool.py will verify submitted shares to check if the proofs in a share (last_proof, proof) produce the hash value provided to the pool by a miner. When a share is verified to be correct it is tallied in a dictionary with the miners address as the key.
-### Reward distribution
-upon pool.py receiving a valid proof and forging a block, the pool will begin to calculate the share of the coinbase reward for each miner and add the value to a dictionary with the miners address as the key. When a miners balance exceeds the payout threshold the pool will submit a transaction to the blockchain to pay the miner their accumulated unpaid reward.
-
 
 ## wallet.py
 This is the GUI wallet for ease of sending transactions to the blockchain. Simply input the address of the recipient, the amount to send, and hit OK. If you have enough funds, and dont have an existing transaction in the mem-pool; your transaction will be broadcasted to the network and confirmed in the next block.
@@ -253,18 +228,19 @@ view your transaction history within the wallet
 - [x] Add signature and hash validation
 - [x] Add Balance Verification
 - [x] Develop Wallet
-- [x] Add pool mining
-- [ ] Improve pool mining efficiency
+- [ ] Improved difficulty algorithm; doesnt scale so aggressively anymore.
+- [ ] Add pool mining - Removed as of Alpha 0.0.1, will be readded upon improvement
+  - [ ] Improve pool mining efficiency
 - [x] Implement mining difficulty scaling to ensure consistent block times
-- [ ] Node persistence
-    - [ ] implement code to allow for nodes to remember each other after they have been shut down
+- [ ] Node persistence - WIP
+    - [x] implement code to allow for nodes to remember each other after they have been shut down
     - [ ] implement a validation algorithm through signatures to ensure a node is who they say they are
-- [ ] Improve overall code robustness
+- [ ] Improve overall code robustness - WIP
     - [ ] Fix up some of the response codes and json messages
     - [ ] code clean up, bug fixes, and optimisation
     - [ ] unit test more of the code
-- [x] Transaction Fees
-- [ ] Implement blockchain explorer (WIP) [Explorer](https://github.com/ock666/python-blockchain-explorer)
+- [ ] Transaction Fees - WIP
+- [ ] Implement blockchain explorer (WIP) [Explorer](https://github.com/ock666/serpentcoin-explorer)
     - [ ] develop method to call chain API from a node and enter the values into a database
     - [ ] develop backend to process chain data from database and analyse it
     - [ ] develop frontend for a user to check address and transactions within blocks
@@ -312,7 +288,7 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 
 Your Name - [Oskar Petersen](https://www.linkedin.com/in/oskar-petersen-39a849185/) - oskargjerlevpetersen@gmail.com
 
-Project Link: [https://github.com/ock666/python-blockchain](https://github.com/ock666/python-blockchain)
+Project Link: [https://github.com/ock666/serpentcoin](https://github.com/ock666/serpentcoin)
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
@@ -334,15 +310,15 @@ Project Link: [https://github.com/ock666/python-blockchain](https://github.com/o
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[contributors-shield]: https://img.shields.io/github/contributors/ock666/python-blockchain.svg?style=for-the-badge
-[contributors-url]: https://github.com/ock666/python-blockchain/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/ock666/python-blockchain.svg?style=for-the-badge
-[forks-url]: https://github.com/ock666/python-blockchain/network/members
-[stars-shield]: https://img.shields.io/github/stars/ock666/python-blockchain.svg?style=for-the-badge
-[stars-url]: https://github.com/ock666/python-blockchain/stargazers
-[issues-shield]: https://img.shields.io/github/issues/ock666/python-blockchain.svg?style=for-the-badge
-[issues-url]: https://github.com/ock666/python-blockchain/issues
-[license-shield]: https://img.shields.io/github/license/ock666/python-blockchain?style=for-the-badge
-[license-url]: https://github.com/ock666/python-blockchain/blob/main/LICENSE.txt
+[contributors-shield]: https://img.shields.io/github/contributors/ock666/serpentcoin.svg?style=for-the-badge
+[contributors-url]: https://github.com/ock666/serpentcoin/graphs/contributors
+[forks-shield]: https://img.shields.io/github/forks/ock666/serpentcoin.svg?style=for-the-badge
+[forks-url]: https://github.com/ock666/serpentcoin/network/members
+[stars-shield]: https://img.shields.io/github/stars/ock666/serpentcoin.svg?style=for-the-badge
+[stars-url]: https://github.com/ock666/serpentcoin/stargazers
+[issues-shield]: https://img.shields.io/github/issues/ock666/serpentcoin.svg?style=for-the-badge
+[issues-url]: https://github.com/ock666/serpentcoin/issues
+[license-shield]: https://img.shields.io/github/license/ock666/serpentcoin?style=for-the-badge
+[license-url]: https://github.com/ock666/serpentcoin/blob/main/LICENSE.txt
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 [linkedin-url]: https://www.linkedin.com/in/oskar-petersen-39a849185/
