@@ -192,6 +192,7 @@ class Node:
         # Grab and verify the chains from all the nodes in our network
         for neighbour in neighbours:
             response = requests.get(f'{Node.prefix}{neighbour}/chain')
+            mempool_resp = requests.get(f'{Node.prefix}{neighbour}/mempool')
 
             if response.status_code == 200:
                 length = response.json()['length']
@@ -199,10 +200,6 @@ class Node:
 
                 # Check if the length is longer and the chain is valid
                 if length > max_length and ValidChain.valid_chain(chain):
-
-                    # Check the mempool is valid
-                    print('grabbing mempool')
-                    mempool_resp = requests.get(f'{Node.prefix}{neighbour}/mempool')
                     for transaction in mempool_resp.json():
                         # if the mempool is invalid we discard this nodes chain and proceed
                         if not Transaction.verify_transaction(transaction, chain, blockchain.coinbase_reward,
