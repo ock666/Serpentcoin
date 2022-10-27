@@ -454,7 +454,7 @@ def receive_block():
             if broadcast_status == "TimeoutError":
                 failed_nodes.append(neighbour)
 
-            if broadcast_status == "Block Received":
+            if broadcast_status == "Block Received" or "block already received":
                 print(neighbour, " has already received block ", forged_block['index'])
 
             # if the broadcast is rejected we will resolve our chain.
@@ -464,11 +464,6 @@ def receive_block():
             if broadcast_status == "Block Invalid":
                 Node.resolve_conflicts()
 
-            else:
-                Node.resolve_conflicts()
-                # if the function returns False the block is denied.
-                print("broadcast denied")
-                return "block broadcast denied", 700
 
         # if the length of the failed node list is greater than zero
         # we iterate through the list and remove those nodes.

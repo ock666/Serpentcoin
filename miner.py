@@ -19,7 +19,7 @@ class Miner:
 
     def __init__(self):
         self.thread_number = 1
-        self.node = '127.0.0.1:5000'
+        self.node = '192.168.0.250:5000'
 
 
         if not os.path.isfile('data/wallet.json'):
