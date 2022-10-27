@@ -113,6 +113,9 @@ class Mempool:
     def clear_fees(self):
         self.pending_fees = 0
 
+    def assess_fees(self):
+        for transaction in self.current_transactions:
+            self.pending_fees += transaction['fee']
 
 class Node:
     # set for storing nodes
@@ -423,9 +426,13 @@ def receive_block():
 
         Write.write_chain(forged_block)
         blockchain.chain.append(forged_block)
-        # and clear the mempool
-        mp.clear_mempool()
+
+        for transaction in values['transactions']:
+            if transaction in mp.current_transactions:
+                mp.current_transactions.remove(transaction)
+
         mp.clear_fees()
+        mp.assess_fees()
 
         print("Block", forged_block['index'], "valid! Successfully added to chain")
 
@@ -457,6 +464,12 @@ def receive_block():
             if broadcast_status == "Block Invalid":
                 Node.resolve_conflicts()
 
+            else:
+                Node.resolve_conflicts()
+                # if the function returns False the block is denied.
+                print("broadcast denied")
+                return "block broadcast denied", 700
+
         # if the length of the failed node list is greater than zero
         # we iterate through the list and remove those nodes.
         if len(failed_nodes) > 0:
@@ -465,12 +478,8 @@ def receive_block():
                 Node.remove_node(address)
 
         return "ok", 200
-
     else:
-        Node.resolve_conflicts()
-        # if the function returns False the block is denied.
-        print("broadcast denied")
-        return "block broadcast denied", 700
+        return "ok", 200
 
 
 @app.route('/difficulty', methods=['GET'])

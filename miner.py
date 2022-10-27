@@ -12,14 +12,14 @@ import random
 from Crypto.Signature import pkcs1_15
 from Crypto.Hash import SHA256
 from multiprocessing import Process
-from tqdm import tqdm
+#from tqdm import tqdm
 from src.utilities import Hash, Write
 
 class Miner:
 
     def __init__(self):
         self.thread_number = 1
-        self.node = '192.168.0.251:5000'
+        self.node = '127.0.0.1:5000'
 
 
         if not os.path.isfile('data/wallet.json'):
@@ -183,8 +183,8 @@ class Miner:
             last_block = self.get_last_block()
             target = self.get_last_nonce()
             target_hex = hex(target)
-            unix_time = time.time()
             transactions = []
+            unix_time = time.time()
             pending_fees = self.get_fees()
             coinbase = self.get_coinbase()
             coinbase_reward_transaction = self.coinbase_transaction(coinbase_amount=coinbase, unix_millis=unix_time, previous_hash=last_block['block_hash'])
@@ -200,6 +200,7 @@ class Miner:
                     transactions.append(transaction)
             print("Round Start!")
             while time.time() < round_end:
+                unix_time = time.time()
                 nonce = random.randint(1, 100000000000000000000000000000000000000000000)
 
                 unforged_block = {
@@ -251,8 +252,9 @@ class Miner:
                         print("new block forged!")
                         break
 
-                    if response.status_code == 400:
+                    else:
                         print("error")
+                        break
 
 
 
