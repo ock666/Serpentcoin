@@ -404,8 +404,7 @@ def receive_block():
         return "block already received", 201
 
     if not index - last_block_index == 1:
-        print('blocks out of order... resolving')
-        Node.resolve_conflicts()
+        print('stale block')
         return "out of order", 500
 
     if not ValidBlock.validate_block(target_nonce=target_nonce, block_data=values):

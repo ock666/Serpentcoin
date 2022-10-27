@@ -185,73 +185,74 @@ class Miner:
             target_hex = hex(target)
             unix_time = time.time()
             transactions = []
-            nonce = random.randint(1, 100000000000000000000000000000000000000000000)
             pending_fees = self.get_fees()
             coinbase = self.get_coinbase()
             coinbase_reward_transaction = self.coinbase_transaction(coinbase_amount=coinbase, unix_millis=unix_time, previous_hash=last_block['block_hash'])
             mempool = self.get_mempool()
             transactions.append(coinbase_reward_transaction)
-
+            round_end = time.time() + 30
             if pending_fees > 0:
-                fee_reward_transaction = self.fee_reward_transaction(fee_amount=pending_fees, unix_millis=unix_time, previous_hash=last_block['block_hash'])
+                fee_reward_transaction = self.fee_reward_transaction(fee_amount=pending_fees, unix_millis=unix_time,
+                                                                     previous_hash=last_block['block_hash'])
                 transactions.append(fee_reward_transaction)
-            if len(self.get_mempool()) > 0:
+            if len(mempool) > 0:
                 for transaction in mempool:
                     transactions.append(transaction)
+            print("Round Start!")
+            while time.time() < round_end:
+                nonce = random.randint(1, 100000000000000000000000000000000000000000000)
 
-            unforged_block = {
-                'index': last_block['index'] + 1,
-                'difficulty': difficulty,
-                'previous_hash': last_block['block_hash'],
-                'nonce': nonce,
-                'target_nonce_hex': target_hex,
-                'timestamp': unix_time,
-                'transactions': transactions
-            }
-
-            transactions = []
-
-            if self.valid_proof(target, unforged_block):
-
-                block_hash = Hash.hash(unforged_block)
-                block_with_hash = {
-                    'index': unforged_block['index'],
-                    'difficulty': unforged_block['difficulty'],
-                    'previous_hash': unforged_block['previous_hash'],
-                    'block_hash': block_hash,
-                    'nonce': unforged_block['nonce'],
-                    'target_nonce_hex': unforged_block['target_nonce_hex'],
-                    'timestamp': unforged_block['timestamp'],
-                    'transactions': unforged_block['transactions'],
-                    'public_key': self.public_key_hex
+                unforged_block = {
+                    'index': last_block['index'] + 1,
+                    'difficulty': difficulty,
+                    'previous_hash': last_block['block_hash'],
+                    'nonce': nonce,
+                    'target_nonce_hex': target_hex,
+                    'timestamp': unix_time,
+                    'transactions': transactions
                 }
 
+                if self.valid_proof(target, unforged_block):
+                    block_hash = Hash.hash(unforged_block)
+                    block_with_hash = {
+                        'index': unforged_block['index'],
+                        'difficulty': unforged_block['difficulty'],
+                        'previous_hash': unforged_block['previous_hash'],
+                        'block_hash': block_hash,
+                        'nonce': unforged_block['nonce'],
+                        'target_nonce_hex': unforged_block['target_nonce_hex'],
+                        'timestamp': unforged_block['timestamp'],
+                        'transactions': unforged_block['transactions'],
+                        'public_key': self.public_key_hex
+                    }
 
 
-                block_sig = self.sign_transaction_data(data=block_with_hash)
 
-                forged_block = {
-                    'index': unforged_block['index'],
-                    'difficulty': unforged_block['difficulty'],
-                    'previous_hash': unforged_block['previous_hash'],
-                    'block_hash': block_hash,
-                    'nonce': unforged_block['nonce'],
-                    'target_nonce_hex': unforged_block['target_nonce_hex'],
-                    'timestamp': unforged_block['timestamp'],
-                    'transactions': unforged_block['transactions'],
-                    'public_key': self.public_key_hex,
-                    'signature': block_sig
-                }
+                    block_sig = self.sign_transaction_data(data=block_with_hash)
 
-                headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-                response = requests.post(f'http://{self.node}/block', json=forged_block,
-                                         headers=headers)
+                    forged_block = {
+                        'index': unforged_block['index'],
+                        'difficulty': unforged_block['difficulty'],
+                        'previous_hash': unforged_block['previous_hash'],
+                        'block_hash': block_hash,
+                        'nonce': unforged_block['nonce'],
+                        'target_nonce_hex': unforged_block['target_nonce_hex'],
+                        'timestamp': unforged_block['timestamp'],
+                        'transactions': unforged_block['transactions'],
+                        'public_key': self.public_key_hex,
+                        'signature': block_sig
+                    }
 
-                if response.status_code == 200:
-                    print("new block forged!")
+                    headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+                    response = requests.post(f'http://{self.node}/block', json=forged_block,
+                                             headers=headers)
 
-                if response.status_code == 400:
-                    print("error")
+                    if response.status_code == 200:
+                        print("new block forged!")
+                        break
+
+                    if response.status_code == 400:
+                        print("error")
 
 
 
